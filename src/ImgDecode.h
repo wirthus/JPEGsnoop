@@ -46,81 +46,81 @@
 #include "WindowBuf.h"
 
 // Color conversion clipping (YCC) reporting
-#define YCC_CLIP_REPORT_ERR true        // Are YCC clips an error?
-#define YCC_CLIP_REPORT_MAX 10  // Number of same error to report
+#define YCC_CLIP_REPORT_ERR     true    // Are YCC clips an error?
+#define YCC_CLIP_REPORT_MAX     10      // Number of same error to report
 
 // Scan image component indices for known arrangements
-#define    COMP_IND_YCC_Y            1
-#define    COMP_IND_YCC_CB            2
-#define    COMP_IND_YCC_CR            3
-#define    COMP_IND_YCC_K            4
-#define    COMP_IND_CMYK_C            1
-#define    COMP_IND_CMYK_M            2
-#define    COMP_IND_CMYK_Y            3
-#define    COMP_IND_CMYK_K            3
+#define COMP_IND_YCC_Y          1
+#define COMP_IND_YCC_CB         2
+#define COMP_IND_YCC_CR         3
+#define COMP_IND_YCC_K          4
+#define COMP_IND_CMYK_C         1
+#define COMP_IND_CMYK_M         2
+#define COMP_IND_CMYK_Y         3
+#define COMP_IND_CMYK_K         3
 
 // Definitions for DHT array indices m_anDhtTblSel[][]
-#define    MAX_DHT_CLASS        2
-#define    MAX_DHT_DEST_ID        4       // Maximum range for DHT Destination ID (ie. DHT:Th). Range 0..3
-#define DHT_CLASS_DC        0
-#define    DHT_CLASS_AC        1
+#define MAX_DHT_CLASS           2
+#define MAX_DHT_DEST_ID         4       // Maximum range for DHT Destination ID (ie. DHT:Th). Range 0..3
+#define DHT_CLASS_DC            0
+#define DHT_CLASS_AC            1
 
-#define MAX_DHT_CODES        260     // Was 180, but with 12-bit DHT, we may have nearly all 0xFF codes
-#define    MAX_DHT_CODELEN        16      // Max number of bits in a code
-#define    DHT_CODE_UNUSED        0xFFFFFFFF      // Mark table entry as unused
+#define MAX_DHT_CODES           260     // Was 180, but with 12-bit DHT, we may have nearly all 0xFF codes
+#define MAX_DHT_CODELEN         16      // Max number of bits in a code
+#define DHT_CODE_UNUSED         0xFFFFFFFF      // Mark table entry as unused
 
-#define    MAX_DQT_DEST_ID        4       // Maximum range for DQT Destination ID (ie. DQT:Tq). Range 0..3
-#define MAX_DQT_COEFF        64      // Number of coefficients in DQT matrix
-#define MAX_DQT_COMP        256     // Max range of frame component identifier (SOF:Ci, 0..255)
+#define MAX_DQT_DEST_ID         4       // Maximum range for DQT Destination ID (ie. DQT:Tq). Range 0..3
+#define MAX_DQT_COEFF           64      // Number of coefficients in DQT matrix
+#define MAX_DQT_COMP            256     // Max range of frame component identifier (SOF:Ci, 0..255)
 
-#define DCT_COEFF_DC        0       // DCT matrix coefficient index for DC component
+#define DCT_COEFF_DC            0       // DCT matrix coefficient index for DC component
 
-#define MAX_SAMP_FACT_H        4       // Maximum sampling factor supported
-#define MAX_SAMP_FACT_V        4       // Maximum sampling factor supported
+#define MAX_SAMP_FACT_H         4       // Maximum sampling factor supported
+#define MAX_SAMP_FACT_V         4       // Maximum sampling factor supported
 
-#define    DQT_DEST_Y            1
-#define    DQT_DEST_CB            2
-#define    DQT_DEST_CR            3
-#define    DQT_DEST_K            4
+#define DQT_DEST_Y              1
+#define DQT_DEST_CB             2
+#define DQT_DEST_CR             3
+#define DQT_DEST_K              4
 
-#define    BLK_SZ_X            8       // JPEG block size (x)
-#define    BLK_SZ_Y            8       // JPEG block size (y)
+#define BLK_SZ_X                8       // JPEG block size (x)
+#define BLK_SZ_Y                8       // JPEG block size (y)
 
-#define DCT_SZ_X            8       // IDCT matrix size (x)
-#define DCT_SZ_Y            8       // IDCT matrix size (y)
-#define    DCT_SZ_ALL            (DCT_SZ_X*DCT_SZ_Y)     // IDCT matrix all coeffs
+#define DCT_SZ_X                8       // IDCT matrix size (x)
+#define DCT_SZ_Y                8       // IDCT matrix size (y)
+#define DCT_SZ_ALL              (DCT_SZ_X*DCT_SZ_Y)     // IDCT matrix all coeffs
 
-#define IMG_BLK_SZ                1       // Size of each MCU in image display
+#define IMG_BLK_SZ              1       // Size of each MCU in image display
 #define MAX_SCAN_DECODED_DIM    512     // X & Y dimension for top-left image display
-#define DHT_FAST_SIZE            9       // Number of bits for DHT direct lookup
+#define DHT_FAST_SIZE           9       // Number of bits for DHT direct lookup
 
 // FIXME: MAX_SOF_COMP_NF per spec might actually be 255
-#define MAX_SOF_COMP_NF            256     // Maximum number of Image Components in Frame (Nf) [from SOF] (Nf range 1..255)
-#define MAX_SOS_COMP_NS            4       // Maximum number of Image Components in Scan (Ns) [from SOS] (Ns range 1..4)
+#define MAX_SOF_COMP_NF         256     // Maximum number of Image Components in Frame (Nf) [from SOF] (Nf range 1..255)
+#define MAX_SOS_COMP_NS         4       // Maximum number of Image Components in Scan (Ns) [from SOS] (Ns range 1..4)
 
 // TODO: Merge with COMP_IND_YCC_*?
-#define SCAN_COMP_Y                1
+#define SCAN_COMP_Y             1
 #define SCAN_COMP_CB            2
 #define SCAN_COMP_CR            3
-#define SCAN_COMP_K                4
+#define SCAN_COMP_K             4
 
 // Number of image channels supported for image output
-#define NUM_CHAN_GRAYSCALE    1
-#define    NUM_CHAN_YCC        3
-#define    NUM_CHAN_YCCK        4
+#define NUM_CHAN_GRAYSCALE      1
+#define NUM_CHAN_YCC            3
+#define NUM_CHAN_YCCK           4
 
 // Image channel indices (after converting component index to channel index)
-#define CHAN_Y                0
-#define    CHAN_CB                1
-#define    CHAN_CR                2
+#define CHAN_Y                  0
+#define CHAN_CB                 1
+#define CHAN_CR                 2
 
-#define CHAN_R                0
-#define    CHAN_G                1
-#define    CHAN_B                2
+#define CHAN_R                  0
+#define CHAN_G                  1
+#define CHAN_B                  2
 
 // Maximum number of blocks that can be marked
 // - This feature is generally used to mark ranges for the detailed scan decode feature
-#define MAX_BLOCK_MARKERS        10
+#define MAX_BLOCK_MARKERS       10
 
 // JFIF Markers relevant for Scan Decoder
 // - Restart markers
@@ -136,23 +136,23 @@ static const uint32_t JFIF_RST7 = 0xD7;
 static const uint32_t JFIF_EOI = 0xD9;
 
 // Color correction clipping indicator
-#define CC_CLIP_NONE          0x00000000
-#define CC_CLIP_Y_UNDER        0x80000000
-#define CC_CLIP_Y_OVER        0x00800000
+#define CC_CLIP_NONE        0x00000000
+#define CC_CLIP_Y_UNDER     0x80000000
+#define CC_CLIP_Y_OVER      0x00800000
 #define CC_CLIP_CB_UNDER    0x40000000
-#define CC_CLIP_CB_OVER        0x00400000
+#define CC_CLIP_CB_OVER     0x00400000
 #define CC_CLIP_CR_UNDER    0x20000000
-#define CC_CLIP_CR_OVER        0x00200000
-#define CC_CLIP_R_UNDER        0x00008000
-#define CC_CLIP_R_OVER        0x00000080
-#define CC_CLIP_G_UNDER        0x00004000
-#define CC_CLIP_G_OVER        0x00000040
-#define CC_CLIP_B_UNDER        0x00002000
-#define CC_CLIP_B_OVER        0x00000020
+#define CC_CLIP_CR_OVER     0x00200000
+#define CC_CLIP_R_UNDER     0x00008000
+#define CC_CLIP_R_OVER      0x00000080
+#define CC_CLIP_G_UNDER     0x00004000
+#define CC_CLIP_G_OVER      0x00000040
+#define CC_CLIP_B_UNDER     0x00002000
+#define CC_CLIP_B_OVER      0x00000020
 
-#define CC_CLIP_YCC_EN        true
-#define CC_CLIP_YCC_MIN        0
-#define CC_CLIP_YCC_MAX        255
+#define CC_CLIP_YCC_EN      true
+#define CC_CLIP_YCC_MIN     0
+#define CC_CLIP_YCC_MAX     255
 
 // Image histogram definitions
 static const int32_t HISTO_BINS = 255; // 128;
