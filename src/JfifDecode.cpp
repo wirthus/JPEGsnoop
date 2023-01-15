@@ -83,12 +83,6 @@ JfifDecode::JfifDecode(ILog &log, WindowBuf &buf, ImgDecode &imgDec, SnoopConfig
 
     // Allocate the Photoshop decoder
     _psDec = std::make_unique<DecodePs>(&_wbuf, &_log);
-
-#ifdef SUPPORT_DICOM
-    // Allocate the DICOM decoder
-    _decDicom = std::make_unique<CDecodeDicom>(&_writeBuf, &_log);
-    // m_pAppConfig->DebugLogAdd("JfifDecode::JfifDecode() Checkpoint 5");
-#endif
 }
 
 JfifDecode::~JfifDecode() = default;
@@ -3831,15 +3825,10 @@ uint32_t JfifDecode::decodeApp13Ps() {
     // and move on to the next marker.
     // FIXME: This does not appear to be very robust
 
-    QString strTmp;
-    QString strBimName;
-
     bool bDone = false;
 
     //uint32_t              nVal = 0x8000;
 
-    QString strVal;
-    QString strByte;
     QString strBimSig;
 
     // Reset PsDec decoder state
@@ -7937,75 +7926,6 @@ void JfifDecode::processFile(uint32_t position) {
     // - start from beginning of file
     // decodeAvi();
     // TODO: Should we skip decode of file if not MJPEG?
-    // ----------------------------------------------------------------
-
-    // Test for PSD file
-    // - Detect header
-    // - FIXME: start from current offset?
-    uint32_t nWidth = 0;
-    uint32_t nHeight = 0;
-
-#ifdef PS_IMG_DEC_EN
-    // If PSD image decoding is enabled, associate the PSD parsing with
-    // the current DIB. After decoding, flag the DIB as ready for display.
-
-    //@@  bDecPsdOk = m_pPsDec->DecodePsd(nStartPos, &m_pImgDec->m_pDibTemp, nWidth, nHeight);
-    auto bDecPsdOk = false;
-
-    if (bDecPsdOk) {
-        // FIXME: The following is a bit of a hack
-        _imgDec.setDibTempReady(true);
-        _imgDec.setPreviewReady(false);        // MCU/Block info not available
-        _imgDec.setImageDimensions(nWidth, nHeight);
-
-        // Clear the image information
-        // The primary reason for this is to ensure we don't have stale information from a previous
-        // JPEG image (eg. real image border inside MCU border which would be overlayed during draw).
-        _imgDec.setImageDetails(0, 0, 0, 0, false, 0);
-
-        // No more processing of file
-        // - Otherwise we'd continue to attempt to decode as JPEG
-        return;
-    }
-#else
-                                                                                                                            // Don't attempt to display Photoshop image data
-  if(m_pPsDec->DecodePsd(nStartPos, nullptr, nWidth, nHeight))
-  {
-    return;
-  }
-#endif
-
-    // ----------------------------------------------------------------
-
-    // Disable DICOM for now until fully tested
-#ifdef SUPPORT_DICOM
-                                                                                                                            // Test for DICOM
-  // - Detect header
-  // - start from beginning of file
-  bool bDicom = false;
-
-  uint32_t nPosJpeg = 0;   // File offset to embedded JPEG in DICOM
-
-  bDicom = m_pDecDicom->DecodeDicom(0, m_nPosFileEnd, nPosJpeg);
-
-  if(bDicom)
-  {
-    // Adjust start of JPEG decoding if we are currently without an offset
-    if(nStartPos == 0)
-    {
-      m_pAppConfig->startPos() = nPosJpeg;
-
-      nStartPos = m_pAppConfig->startPos();
-      m_nPos = nStartPos;
-      m_nPosEmbedStart = nStartPos;     // Save the embedded file start position
-
-      strTmp = QString("Adjusting Start Offset to: 0x%08X"), nStartPos;
-      m_pLog->AddLine(strTmp);
-      m_pLog->AddLine("");
-    }
-  }
-#endif
-
     // ----------------------------------------------------------------
 
     // Decode as JPEG JFIF file

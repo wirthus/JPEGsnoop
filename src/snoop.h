@@ -47,10 +47,6 @@
 // Disable code that isn't fully implemented yet
 //#define TODO
 
-// Enable Photoshop image/layer rendering
-// TODO: Not fully implemented yet
-#define PS_IMG_DEC_EN
-
 // User Local Database filename
 #define DAT_FILE "JPEGsnoop_db.dat"
 

@@ -43,9 +43,6 @@
 
 static constexpr uint32_t EXPORT_BUF_SIZE = 128 * 1024;
 
-// Disable DICOM support until fully tested
-//#define SUPPORT_DICOM
-
 static const int32_t MAX_IFD_COMPS = 150;        // Maximum number of IFD entry components to display
 
 static const uint32_t JFIF_SOF0 = 0xC0;
@@ -119,8 +116,6 @@ static const uint32_t JFIF_DHT_FAKE_SZ = 0x1A4;
 #define APP14_COLXFM_UNK_RGB   0
 #define APP14_COLXFM_YCC       1
 #define APP14_COLXFM_YCCK      2
-
-// #define SUPPORT_DICOM
 
 static const int32_t MAX_IDENTIFIER = 256;       // Max length for identifier strings (include terminator)
 
@@ -234,9 +229,6 @@ private:
     ImgDecode &_imgDec;
     SnoopConfig &_appConfig;
     std::unique_ptr<DecodePs> _psDec;
-#ifdef SUPPORT_DICOM
-    std::unique_ptr<CDecodeDicom> _decDicom;
-#endif
 
     uint8_t _writeBuf[EXPORT_BUF_SIZE];
     bool _verbose;

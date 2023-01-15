@@ -18,8 +18,6 @@
 
 #include "ImgDecode.h"
 
-#include <QImage>
-
 #include <cmath>
 
 #include "SnoopConfig.h"
@@ -47,14 +45,6 @@ ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject
 
     _verbose = false;
 
-    _imgDecoded = false;        // Image has not been decoded yet
-    _dibTempReady = false;
-    _isPreviewReady = false;
-    m_bDibHistRgbReady = false;
-    m_bDibHistYReady = false;
-
-    _statClipEnabled = false;        // UNUSED
-
     m_pMcuFileMap = nullptr;
     m_pBlkDcValY = nullptr;
     m_pBlkDcValCb = nullptr;
@@ -66,8 +56,6 @@ ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject
     // Reset the image decoding state
     reset();
 
-    m_nImgSizeXPartMcu = 0;
-    m_nImgSizeYPartMcu = 0;
     m_nImgSizeX = 0;
     m_nImgSizeY = 0;
 
@@ -81,8 +69,6 @@ ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject
     m_nDetailVlcY = 0;
     m_nDetailVlcLen = 1;
 
-    m_sHisto.nClipYMin = 0;
-
     // Set up the IDCT lookup tables
     PrecalcIdct();
 
@@ -94,8 +80,6 @@ ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject
     resetState();
 
     _decodeScanAc = true;
-
-    m_bViewOverlaysMcuGrid = false;
 }
 
 // Destructor for Image Decode class
@@ -123,8 +107,6 @@ void ImgDecode::reset() {
     m_bRestartRead = false;       // No restarts seen yet
     m_nRestartRead = 0;
 
-    m_nImgSizeXPartMcu = 0;
-    m_nImgSizeYPartMcu = 0;
     m_nImgSizeX = 0;
     m_nImgSizeY = 0;
     m_nMcuXMax = 0;
@@ -145,15 +127,6 @@ void ImgDecode::reset() {
     m_bAvgYValid = false;
     m_nAvgY = 0;
 
-    // Image has not been decoded yet
-    _imgDecoded = false;
-
-    // If a DIB has been generated, release it!
-    _dibTempReady = false;
-
-    m_bDibHistRgbReady = false;
-    m_bDibHistYReady = false;
-
     deleteAndNullBlk(m_pMcuFileMap);
     deleteAndNullBlk(m_pBlkDcValY);
     deleteAndNullBlk(m_pBlkDcValCb);
@@ -166,25 +139,6 @@ void ImgDecode::reset() {
     if (!m_bScanErrorsDisable) {
         m_nWarnBadScanNum = 0;
     }
-    m_nWarnYccClipNum = 0;
-
-    // Reset the view
-    m_nPreviewPosX = 0;
-    m_nPreviewPosY = 0;
-    m_nPreviewSizeX = 0;
-    m_nPreviewSizeY = 0;
-}
-
-bool ImgDecode::isImgDecoded() const {
-    return _imgDecoded;
-}
-
-bool ImgDecode::isDibTempReady() const {
-    return _dibTempReady;
-}
-
-void ImgDecode::setDibTempReady(bool ready) {
-    _dibTempReady = ready;
 }
 
 // Reset the major parameters
@@ -660,11 +614,6 @@ void ImgDecode::setImageDetails(uint32_t nDimX, uint32_t nDimY, uint32_t nCompsS
     m_nNumSosComps = nCompsSOS;
     m_bRestartEn = bRstEn;
     m_nRestartInterval = nRstInterval;
-}
-
-// Reset the image content to prepare it for the upcoming scans
-// - TODO: Migrate pixel bitmap allocation / clearing from DecodeScanImg() to here
-void ImgDecode::ResetImageContent() {
 }
 
 // Set the sampling factor for an image component
@@ -2650,24 +2599,6 @@ void ImgDecode::CheckScanErrors(uint32_t nMcuX, uint32_t nMcuY, uint32_t nCssInd
     }                             // Error?
 }
 
-// Report the cumulative DC value
-//
-// INPUT:
-// - nMcuX                              = MCU x coordinate
-// - nMcuY                              = MCU y coordinate
-// - nVal                               = DC value
-//
-void ImgDecode::printDcCumVal(uint32_t nMcuX, uint32_t nMcuY, int32_t nVal) {
-    QString strTmp;
-
-    /*  strTmp = QString("  MCU [%1,%2] DC Cumulative Val = [%3]")
-      .arg(nMcuX, 4)
-      .arg(nMcuY, 4)
-      .arg(nVal, 5); */
-    strTmp = QString("                 Cumulative DC Val=[%1]").arg(nVal, 5);
-    _log.info(strTmp);
-}
-
 // Reset the DC values in the decoder (e.g. at start and
 // after restart markers)
 //
@@ -2689,11 +2620,6 @@ void ImgDecode::DecodeRestartDcState() {
         m_anDcChrCbCss[nInd] = 0;
         m_anDcChrCrCss[nInd] = 0;
     }
-}
-
-//TODO
-void ImgDecode::setImageDimensions(uint32_t nWidth, uint32_t nHeight) {
-    m_rectImgBase = QRect(QPoint(0, 0), QSize(nWidth, nHeight));
 }
 
 // Process the entire scan segment and optionally render the image
@@ -2723,8 +2649,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     } else {
         decodeScanAc = false;
     }
-
-    _statClipEnabled = _appConfig.clipStats();
 
     int32_t nPixMapW = 0;
     int32_t nPixMapH = 0;
@@ -2831,9 +2755,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     m_nMcuXMax = (m_nDimX / m_nMcuWidth);
     m_nMcuYMax = (m_nDimY / m_nMcuHeight);
 
-    m_nImgSizeXPartMcu = m_nMcuXMax * m_nMcuWidth;
-    m_nImgSizeYPartMcu = m_nMcuYMax * m_nMcuHeight;
-
     // Detect incomplete (partial) MCUs and round-up the MCU ranges if necessary.
     if ((m_nDimX % m_nMcuWidth) != 0) {
         m_nMcuXMax++;
@@ -2856,7 +2777,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     m_nImgSizeX = m_nMcuXMax * m_nMcuWidth;
     m_nImgSizeY = m_nMcuYMax * m_nMcuHeight;
     _log.debug(QString("ImgDecode::decodeScanImg ImgSizeX=%1 ImgSizeY=%2").arg(m_nImgSizeX).arg(m_nImgSizeY));
-    m_rectImgBase = QRect(QPoint(0, 0), QSize(m_nImgSizeX, m_nImgSizeY));
 
     // Determine decoding range
     int32_t nDecMcuRowStart;
@@ -2912,12 +2832,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     if (display) {
         ClrFullRes(nPixMapW, nPixMapH);
     }
-
-    // If a previous bitmap was created, deallocate it and start fresh
-    _dibTempReady = false;
-    _isPreviewReady = false;
-
-    // -------------------------------------
 
     // Reset the DC cumulative state
     DecodeRestartDcState();
@@ -3065,20 +2979,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     _wbuf.reportOverlays(_log);
 
     m_nNumPixels = 0;
-
-    // Clear the histogram and color correction clipping stats
-    if (display) {
-        memset(&m_sStatClip, 0, sizeof(m_sStatClip));
-        memset(&m_sHisto, 0, sizeof(m_sHisto));
-
-        // FIXME: Histo should now be done after color convert
-        memset(&m_anCcHisto_r, 0, sizeof(m_anCcHisto_r));
-        memset(&m_anCcHisto_g, 0, sizeof(m_anCcHisto_g));
-        memset(&m_anCcHisto_b, 0, sizeof(m_anCcHisto_b));
-
-        memset(&m_anHistoYFull, 0, sizeof(m_anHistoYFull));
-        memset(&m_anHistoYSubset, 0, sizeof(m_anHistoYSubset));
-    }
 
     // -----------------------------------------------------------------------
     // Process all scan MCUs
@@ -3630,15 +3530,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
         _log.info("");
     }
 
-    // Set an indicator that we have completed an image decode
-    _imgDecoded = true;
-
-    // DIB is ready for display now
-    if (display) {
-        _dibTempReady = true;
-        _isPreviewReady = true;
-    }
-
     // ------------------------------------
     // Report statistics
 
@@ -3690,9 +3581,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
                 _log.info("");
             }
         }
-
-        // Report YCC stats
-        reportColorStats();
     }                             // !quiet
 
     // ------------------------------------
@@ -3728,60 +3616,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
         _log.info(strTmp);
         _log.info("");
     }
-}
-
-bool ImgDecode::isPreviewReady() const {
-    return _isPreviewReady;
-}
-
-void ImgDecode::setPreviewReady(bool ready) {
-    _isPreviewReady = ready;
-}
-
-// Report out the color conversion statistics
-//
-// PRE:
-// - m_sStatClip
-// - m_sHisto
-//
-void ImgDecode::reportColorStats() {
-    QString strTmp;
-
-    // Report YCC stats
-    if (CC_CLIP_YCC_EN) {
-        strTmp = QString("  YCC clipping in DC:");
-        _log.info(strTmp);
-        strTmp = QString("    Y  component: [<0=%1] [>255=%2]").arg(m_sStatClip.nClipYUnder,
-                                                                    5).arg(m_sStatClip.nClipYOver, 5);
-        _log.info(strTmp);
-        strTmp = QString("    Cb component: [<0=%1] [>255=%2]").arg(m_sStatClip.nClipCbUnder,
-                                                                    5).arg(m_sStatClip.nClipCbOver, 5);
-        _log.info(strTmp);
-        strTmp = QString("    Cr component: [<0=%1] [>255=%2]").arg(m_sStatClip.nClipCrUnder,
-                                                                    5).arg(m_sStatClip.nClipCrOver, 5);
-        _log.info(strTmp);
-        _log.info("");
-    }
-
-    strTmp = QString("  RGB clipping in DC:");
-    _log.info(strTmp);
-    strTmp = QString("    R  component: [<0=%1] [>255=%2]")
-        .arg(m_sStatClip.nClipRUnder, 5)
-        .arg(m_sStatClip.nClipROver, 5);
-    _log.info(strTmp);
-    strTmp = QString("    G  component: [<0=%1] [>255=%2]")
-        .arg(m_sStatClip.nClipGUnder, 5)
-        .arg(m_sStatClip.nClipGOver, 5);
-    _log.info(strTmp);
-    strTmp = QString("    B  component: [<0=%1] [>255=%2]")
-        .arg(m_sStatClip.nClipBUnder, 5)
-        .arg(m_sStatClip.nClipBOver, 5);
-    _log.info(strTmp);
-    /*
-     strTmp = QString("    White Highlight:         [>255=%5u]")).arg(m_sStatClip.nClipWhiteOver;
-     m_pLog->AddLine(strTmp);
-   */
-    _log.info("");
 }
 
 // Reset the decoder Scan Buff (at start of scan and
@@ -3847,638 +3681,6 @@ void ImgDecode::DecodeRestartScanBuf(uint32_t nFilePos, bool bRestart) {
     m_nRestartMcusLeft = m_nRestartInterval;
 }
 
-// Color conversion from YCC to RGB
-//
-// INPUT:
-// - sPix                               = Structure for color conversion
-// OUTPUT:
-// - sPix                               = Structure for color conversion
-//
-void ImgDecode::ConvertYCCtoRGBFastFloat(PixelCc &sPix) {
-    int32_t nValY, nValCb, nValCr;
-
-    double nValR, nValG, nValB;
-
-    // Perform ranging to adjust from Huffman sums to reasonable range
-    // -1024..+1024 -> -128..127
-    sPix.nPreclipY = sPix.nPrerangeY >> 3;
-    sPix.nPreclipCb = sPix.nPrerangeCb >> 3;
-    sPix.nPreclipCr = sPix.nPrerangeCr >> 3;
-
-    // Limit on YCC input
-    // The y/cb/nPreclipCr values should already be 0..255 unless we have a
-    // decode error where DC value gets out of range!
-    //CapYccRange(nMcuX,nMcuY,sPix);
-    nValY = (sPix.nPreclipY < -128) ? -128 : (sPix.nPreclipY > 127) ? 127 : sPix.nPreclipY;
-    nValCb = (sPix.nPreclipCb < -128) ? -128 : (sPix.nPreclipCb > 127) ? 127 : sPix.nPreclipCb;
-    nValCr = (sPix.nPreclipCr < -128) ? -128 : (sPix.nPreclipCr > 127) ? 127 : sPix.nPreclipCr;
-
-    // Save the YCC values (0..255)
-    sPix.nFinalY = static_cast < uint8_t > (nValY + 128);
-    sPix.nFinalCb = static_cast < uint8_t > (nValCb + 128);
-    sPix.nFinalCr = static_cast < uint8_t > (nValCr + 128);
-
-    // Convert
-    // Since the following seems to preserve the multiplies and subtractions
-    // we could expand this out manually
-    double fConstRed = 0.299f;
-    double fConstGreen = 0.587f;
-    double fConstBlue = 0.114f;
-
-    // r = cr * 1.402 + y;
-    // b = cb * 1.772 + y;
-    // g = (y - 0.03409 * r) / 0.587;
-    nValR = nValCr * (2 - 2 * fConstRed) + nValY;
-    nValB = nValCb * (2 - 2 * fConstBlue) + nValY;
-    nValG = (nValY - fConstBlue * nValB - fConstRed * nValR) / fConstGreen;
-
-    // Level shift
-    nValR += 128;
-    nValB += 128;
-    nValG += 128;
-
-    // --------------- Finshed the color conversion
-
-    // Limit
-    //   r/g/nPreclipB -> r/g/b
-    //CapRgbRange(nMcuX,nMcuY,sPix);
-    sPix.nFinalR = (nValR < 0) ? 0 : (nValR > 255) ? 255 : static_cast<uint8_t>(nValR);
-    sPix.nFinalG = (nValG < 0) ? 0 : (nValG > 255) ? 255 : static_cast<uint8_t>(nValG);
-    sPix.nFinalB = (nValB < 0) ? 0 : (nValB > 255) ? 255 : static_cast<uint8_t>(nValB);
-}
-
-// Color conversion from YCC to RGB
-//
-// INPUT:
-// - sPix                               = Structure for color conversion
-// OUTPUT:
-// - sPix                               = Structure for color conversion
-//
-void ImgDecode::ConvertYCCtoRGBFastFixed(PixelCc &sPix) {
-    int32_t nPreclipY, nPreclipCb, nPreclipCr;
-    int32_t nValY, nValCb, nValCr;
-    int32_t nValR, nValG, nValB;
-
-    // Perform ranging to adjust from Huffman sums to reasonable range
-    // -1024..+1024 -> -128..+127
-    nPreclipY = sPix.nPrerangeY >> 3;
-    nPreclipCb = sPix.nPrerangeCb >> 3;
-    nPreclipCr = sPix.nPrerangeCr >> 3;
-
-    // Limit on YCC input
-    // The nPreclip* values should already be 0..255 unless we have a
-    // decode error where DC value gets out of range!
-
-    //CapYccRange(nMcuX,nMcuY,sPix);
-    nValY = (nPreclipY < -128) ? -128 : (nPreclipY > 127) ? 127 : nPreclipY;
-    nValCb = (nPreclipCb < -128) ? -128 : (nPreclipCb > 127) ? 127 : nPreclipCb;
-    nValCr = (nPreclipCr < -128) ? -128 : (nPreclipCr > 127) ? 127 : nPreclipCr;
-
-    // Save the YCC values (0..255)
-    sPix.nFinalY = static_cast < uint8_t > (nValY + 128);
-    sPix.nFinalCb = static_cast < uint8_t > (nValCb + 128);
-    sPix.nFinalCr = static_cast < uint8_t > (nValCr + 128);
-
-    // --------------
-
-    // Convert
-    // Fixed values is x 1024 (10 bits). Leaves 22 bits for integer
-    //r2 = 1024*cr1*(2-2*fConstRed)+1024*y1;
-    //b2 = 1024*cb1*(2-2*fConstBlue)+1024*y1;
-    //g2 = 1024*(y1-fConstBlue*b2/1024-fConstRed*r2/1024)/fConstGreen;
-
-    const int32_t CFIX_R = 306;
-    const int32_t CFIX_G = 601;
-    const int32_t CFIX_B = 116;
-    const int32_t CFIX2_R = 1436;        // 2*(1024-cfix_red)
-    const int32_t CFIX2_B = 1816;        // 2*(1024-cfix_blue)
-    const int32_t CFIX2_G = 1048576;     // 1024*1024
-
-    nValR = CFIX2_R * nValCr + 1024 * nValY;
-    nValB = CFIX2_B * nValCb + 1024 * nValY;
-    nValG = (CFIX2_G * nValY - CFIX_B * nValB - CFIX_R * nValR) / CFIX_G;
-
-    nValR >>= 10;
-    nValG >>= 10;
-    nValB >>= 10;
-
-    // Level shift
-    nValR += 128;
-    nValB += 128;
-    nValG += 128;
-
-    // Limit
-    //   r/g/nPreclipB -> r/g/b
-    sPix.nFinalR = (nValR < 0) ? 0 : (nValR > 255) ? 255 : static_cast < uint8_t > (nValR);
-    sPix.nFinalG = (nValG < 0) ? 0 : (nValG > 255) ? 255 : static_cast < uint8_t > (nValG);
-    sPix.nFinalB = (nValB < 0) ? 0 : (nValB > 255) ? 255 : static_cast < uint8_t > (nValB);
-}
-
-// Color conversion from YCC to RGB
-// - CC: y/cb/cr -> r/g/b
-//
-// INPUT:
-// - nMcuX                              = MCU x coordinate
-// - nMcuY                              = MCU y coordinate
-// - sPix                               = Structure for color conversion
-// OUTPUT:
-// - sPix                               = Structure for color conversion
-// POST:
-// - m_sHisto
-// - m_anHistoYFull[]
-// - m_anCcHisto_r[]
-// - m_anCcHisto_g[]
-// - m_anCcHisto_b[]
-//
-void ImgDecode::ConvertYCCtoRGB(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
-    double fConstRed = 0.299;
-    double fConstGreen = 0.587;
-    double fConstBlue = 0.114;
-
-    int32_t nByteY, nByteCb, nByteCr;
-    int32_t nValY, nValCb, nValCr;
-
-    double nValR, nValG, nValB;
-
-    // Perform ranging to adjust from Huffman sums to reasonable range
-    // -1024..+1024 -> 0..255
-    // Add 1024 then / 8
-    sPix.nPreclipY = (sPix.nPrerangeY + 1024) / 8;
-    sPix.nPreclipCb = (sPix.nPrerangeCb + 1024) / 8;
-    sPix.nPreclipCr = (sPix.nPrerangeCr + 1024) / 8;
-
-    // Limit on YCC input
-    // The y/cb/nPreclipCr values should already be 0..255 unless we have a
-    // decode error where DC value gets out of range!
-    CapYccRange(nMcuX, nMcuY, sPix);
-
-    // --------------- Perform the color conversion
-    nByteY = sPix.nFinalY;
-    nByteCb = sPix.nFinalCb;
-    nByteCr = sPix.nFinalCr;
-
-    // Level shift
-    nValY = nByteY - 128;
-    nValCb = nByteCb - 128;
-    nValCr = nByteCr - 128;
-
-    // Convert
-    nValR = nValCr * (2.0 - 2.0 * fConstRed) + nValY;
-    nValB = nValCb * (2.0 - 2.0 * fConstBlue) + nValY;
-    nValG = (nValY - fConstBlue * nValB - fConstRed * nValR) / fConstGreen;
-
-    // Level shift
-    nValR += 128;
-    nValB += 128;
-    nValG += 128;
-
-    sPix.nPreclipR = nValR;
-    sPix.nPreclipG = nValG;
-    sPix.nPreclipB = nValB;
-    // --------------- Finshed the color conversion
-
-    // Limit
-    // - Preclip RGB to Final RGB
-    CapRgbRange(nMcuX, nMcuY, sPix);
-
-    // Display
-    /*
-     strTmp = QString("* (YCC->RGB) @ (%03u,%03u): YCC=(%4d,%4d,%4d) RGB=(%03u,%03u,%u)",
-     nMcuX,nMcuY,y,cb,cr,r_limb,g_limb,b_limb);
-     m_pLog->AddLine(strTmp);
-   */
-}
-
-// Color conversion clipping
-// - Process the pre-clipped YCC values and ensure they
-//   have been clipped into the valid region
-//
-// INPUT:
-// - nMcuX                              = MCU x coordinate
-// - nMcuY                              = MCU y coordinate
-// - sPix                               = Structure for color conversion
-// OUTPUT:
-// - sPix                               = Structure for color conversion
-// POST:
-// - m_sHisto
-//
-void ImgDecode::CapYccRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
-    // Check the bounds on the YCC value. It should probably be 0..255 unless our DC
-    // values got really messed up in a corrupt file. Perhaps it might be best to reset it to 0? Otherwise
-    // it will continuously report an out-of-range value.
-    int32_t nCurY, nCurCb, nCurCr;
-
-    nCurY = sPix.nPreclipY;
-    nCurCb = sPix.nPreclipCb;
-    nCurCr = sPix.nPreclipCr;
-
-    if (CC_CLIP_YCC_EN) {
-        if (nCurY > CC_CLIP_YCC_MAX) {
-            if (YCC_CLIP_REPORT_ERR && (m_nWarnYccClipNum < YCC_CLIP_REPORT_MAX)) {
-                QString strTmp;
-
-                strTmp = QString("*** NOTE: YCC Clipped. MCU=(%1,%2) YCC=(%3,%4,%5) Y Overflow @ Offset %6")
-                    .arg(nMcuX, 4)
-                    .arg(nMcuY, 4)
-                    .arg(nCurY, 5)
-                    .arg(nCurCb, 5)
-                    .arg(nCurCr, 5)
-                    .arg(getScanBufPos());
-                _log.warn(strTmp);
-                m_nWarnYccClipNum++;
-                m_sStatClip.nClipYOver++;
-
-                if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(YCC_CLIP_REPORT_MAX);
-                    _log.warn(strTmp);
-                }
-            }
-
-            sPix.nClip |= CC_CLIP_Y_OVER;
-            nCurY = CC_CLIP_YCC_MAX;
-        }
-
-        if (nCurY < CC_CLIP_YCC_MIN) {
-            if (YCC_CLIP_REPORT_ERR && (m_nWarnYccClipNum < YCC_CLIP_REPORT_MAX)) {
-                QString strTmp;
-
-                strTmp = QString("*** NOTE: YCC Clipped. MCU=(%1,%2) YCC=(%3,%4,%5) Y Underflow @ Offset %6")
-                    .arg(nMcuX, 4)
-                    .arg(nMcuY, 4)
-                    .arg(nCurY, 5)
-                    .arg(nCurCb, 5)
-                    .arg(nCurCr, 5)
-                    .arg(getScanBufPos());
-                _log.warn(strTmp);
-                m_nWarnYccClipNum++;
-                m_sStatClip.nClipYUnder++;
-
-                if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(YCC_CLIP_REPORT_MAX);
-                    _log.warn(strTmp);
-                }
-            }
-
-            sPix.nClip |= CC_CLIP_Y_UNDER;
-            nCurY = CC_CLIP_YCC_MIN;
-        }
-
-        if (nCurCb > CC_CLIP_YCC_MAX) {
-            if (YCC_CLIP_REPORT_ERR && (m_nWarnYccClipNum < YCC_CLIP_REPORT_MAX)) {
-                QString strTmp;
-
-                strTmp = QString("*** NOTE: YCC Clipped.  MCU=(%1,%2) YCC=(%3,%4,%5) Cb Overflow @ Offset %6")
-                    .arg(nMcuX, 4)
-                    .arg(nMcuY, 4)
-                    .arg(nCurY, 5)
-                    .arg(nCurCb, 5)
-                    .arg(nCurCr, 5)
-                    .arg(getScanBufPos());
-                _log.warn(strTmp);
-                m_nWarnYccClipNum++;
-                m_sStatClip.nClipCbOver++;
-
-                if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(YCC_CLIP_REPORT_MAX);
-                    _log.warn(strTmp);
-                }
-            }
-
-            sPix.nClip |= CC_CLIP_CB_OVER;
-            nCurCb = CC_CLIP_YCC_MAX;
-        }
-
-        if (nCurCb < CC_CLIP_YCC_MIN) {
-            if (YCC_CLIP_REPORT_ERR && (m_nWarnYccClipNum < YCC_CLIP_REPORT_MAX)) {
-                QString strTmp;
-
-                strTmp = QString("*** NOTE: YCC Clipped.  MCU=(%1,%2) YCC=(%3,%4,%5) Cb Underflow @ Offset %6")
-                    .arg(nMcuX, 4)
-                    .arg(nMcuY, 4)
-                    .arg(nCurY, 5)
-                    .arg(nCurCb, 5)
-                    .arg(nCurCr, 5)
-                    .arg(getScanBufPos());
-                _log.warn(strTmp);
-                m_nWarnYccClipNum++;
-                m_sStatClip.nClipCbUnder++;
-
-                if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(YCC_CLIP_REPORT_MAX);
-                    _log.warn(strTmp);
-                }
-            }
-
-            sPix.nClip |= CC_CLIP_CB_UNDER;
-            nCurCb = CC_CLIP_YCC_MIN;
-        }
-
-        if (nCurCr > CC_CLIP_YCC_MAX) {
-            if (YCC_CLIP_REPORT_ERR && (m_nWarnYccClipNum < YCC_CLIP_REPORT_MAX)) {
-                QString strTmp;
-
-                strTmp = QString("*** NOTE: YCC Clipped.  MCU=(%1,%2) YCC=(%3,%4,%5) Cr Overflow @ Offset %6")
-                    .arg(nMcuX, 4)
-                    .arg(nMcuY, 4)
-                    .arg(nCurY, 5)
-                    .arg(nCurCb, 5)
-                    .arg(nCurCr, 5)
-                    .arg(getScanBufPos());
-                _log.warn(strTmp);
-                m_nWarnYccClipNum++;
-                m_sStatClip.nClipCrOver++;
-
-                if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(YCC_CLIP_REPORT_MAX);
-                    _log.warn(strTmp);
-                }
-            }
-
-            sPix.nClip |= CC_CLIP_CR_OVER;
-            nCurCr = CC_CLIP_YCC_MAX;
-        }
-
-        if (nCurCr < CC_CLIP_YCC_MIN) {
-            if (YCC_CLIP_REPORT_ERR && (m_nWarnYccClipNum < YCC_CLIP_REPORT_MAX)) {
-                QString strTmp;
-
-                strTmp = QString("*** NOTE: YCC Clipped.  MCU=(%1,%2) YCC=(%3,%4,%5) Cr Underflow @ Offset %6")
-                    .arg(nMcuX, 4)
-                    .arg(nMcuY, 4)
-                    .arg(nCurY, 5)
-                    .arg(nCurCb, 5)
-                    .arg(nCurCr, 5)
-                    .arg(getScanBufPos());
-                _log.warn(strTmp);
-                m_nWarnYccClipNum++;
-                m_sStatClip.nClipCrUnder++;
-
-                if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(YCC_CLIP_REPORT_MAX);
-                    _log.warn(strTmp);
-                }
-            }
-
-            sPix.nClip |= CC_CLIP_CR_UNDER;
-            nCurCr = CC_CLIP_YCC_MIN;
-        }
-    }                             // YCC clip enabled?
-
-    // Perform color conversion: YCC->RGB
-    // The nCurY/cb/cr values should already be clipped to byte size
-    sPix.nFinalY = static_cast < uint8_t > (nCurY);
-    sPix.nFinalCb = static_cast < uint8_t > (nCurCb);
-    sPix.nFinalCr = static_cast < uint8_t > (nCurCr);
-}
-
-// Color conversion clipping (RGB)
-// - Input RGB triplet in floats
-// - Expect range to be 0..255
-// - Return RGB triplet in byteuis
-// - Report if it is out of range
-// - Converts from Preclip RGB to Final RGB
-//
-// INPUT:
-// - nMcuX                              = MCU x coordinate
-// - nMcuY                              = MCU y coordinate
-// - sPix                               = Structure for color conversion
-// OUTPUT:
-// - sPix                               = Structure for color conversion
-// POST:
-// - m_sHisto
-//
-void ImgDecode::CapRgbRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
-    int32_t nLimitR, nLimitG, nLimitB;
-
-    // Truncate
-    nLimitR = static_cast<int32_t>(sPix.nPreclipR);
-    nLimitG = static_cast<int32_t>(sPix.nPreclipG);
-    nLimitB = static_cast<int32_t>(sPix.nPreclipB);
-
-    if (nLimitR < 0) {
-        if (_verbose) {
-            QString strTmp;
-
-            strTmp = QString("  YCC->RGB Clipped. MCU=(%1,%2) RGB=(%3,%4,%5) Red Underflow")
-                .arg(nMcuX, 4)
-                .arg(nMcuY, 4)
-                .arg(nLimitR, 5)
-                .arg(nLimitG, 5)
-                .arg(nLimitB, 5);
-            _log.warn(strTmp);
-        }
-
-        sPix.nClip |= CC_CLIP_R_UNDER;
-        m_sStatClip.nClipRUnder++;
-        nLimitR = 0;
-    }
-
-    if (nLimitG < 0) {
-        if (_verbose) {
-            QString strTmp;
-
-            strTmp = QString("  YCC->RGB Clipped. MCU=(%1,%2) RGB=(%3,%4,%5) Green Underflow")
-                .arg(nMcuX, 4)
-                .arg(nMcuY, 4)
-                .arg(nLimitR, 5)
-                .arg(nLimitG, 5)
-                .arg(nLimitB, 5);
-            _log.warn(strTmp);
-        }
-
-        sPix.nClip |= CC_CLIP_G_UNDER;
-        m_sStatClip.nClipGUnder++;
-        nLimitG = 0;
-    }
-
-    if (nLimitB < 0) {
-        if (_verbose) {
-            QString strTmp;
-
-            strTmp = QString("  YCC->RGB Clipped. MCU=(%1,%2) RGB=(%3,%4,%5) Blue Underflow")
-                .arg(nMcuX, 4)
-                .arg(nMcuY, 4)
-                .arg(nLimitR, 5)
-                .arg(nLimitG, 5)
-                .arg(nLimitB, 5);
-            _log.warn(strTmp);
-        }
-
-        sPix.nClip |= CC_CLIP_B_UNDER;
-        m_sStatClip.nClipBUnder++;
-        nLimitB = 0;
-    }
-
-    if (nLimitR > 255) {
-        if (_verbose) {
-            QString strTmp;
-
-            strTmp = QString("  YCC->RGB Clipped. MCU=(%1,%2) RGB=(%3,%4,%5) Red Overflow")
-                .arg(nMcuX, 4)
-                .arg(nMcuY, 4)
-                .arg(nLimitR, 5)
-                .arg(nLimitG, 5)
-                .arg(nLimitB, 5);
-            _log.warn(strTmp);
-        }
-
-        sPix.nClip |= CC_CLIP_R_OVER;
-        m_sStatClip.nClipROver++;
-        nLimitR = 255;
-    }
-
-    if (nLimitG > 255) {
-        if (_verbose) {
-            QString strTmp;
-
-            strTmp = QString("  YCC->RGB Clipped. MCU=(%1,%2) RGB=(%3,%4,%5) Green Overflow")
-                .arg(nMcuX, 4)
-                .arg(nMcuY, 4)
-                .arg(nLimitR, 5)
-                .arg(nLimitG, 5)
-                .arg(nLimitB, 5);
-            _log.warn(strTmp);
-        }
-
-        sPix.nClip |= CC_CLIP_G_OVER;
-        m_sStatClip.nClipGOver++;
-        nLimitG = 255;
-    }
-
-    if (nLimitB > 255) {
-        if (_verbose) {
-            QString strTmp;
-
-            strTmp = QString("  YCC->RGB Clipped. MCU=(%1,%2) RGB=(%3,%4,%5) Blue Overflow")
-                .arg(nMcuX, 4)
-                .arg(nMcuY, 4)
-                .arg(nLimitR, 5)
-                .arg(nLimitG, 5)
-                .arg(nLimitB, 5);
-            _log.warn(strTmp);
-        }
-
-        sPix.nClip |= CC_CLIP_B_OVER;
-        m_sStatClip.nClipBOver++;
-        nLimitB = 255;
-    }
-
-    // Now convert to byteui
-    sPix.nFinalR = static_cast<uint8_t>(nLimitR);
-    sPix.nFinalG = static_cast<uint8_t>(nLimitG);
-    sPix.nFinalB = static_cast<uint8_t>(nLimitB);
-}
-
-// Fetch the detailed decode settings (VLC)
-//
-// OUTPUT:
-// - bDetail                    = Enable for detailed scan VLC reporting
-// - nX                                 = Start of detailed scan decode MCU X coordinate
-// - nY                                 = Start of detailed scan decode MCU Y coordinate
-// - nLen                               = Number of MCUs to parse in detailed scan decode
-//
-void ImgDecode::GetDetailVlc(bool &bDetail, uint32_t &nX, uint32_t &nY, uint32_t &nLen) {
-    bDetail = m_bDetailVlc;
-    nX = m_nDetailVlcX;
-    nY = m_nDetailVlcY;
-    nLen = m_nDetailVlcLen;
-}
-
-// Set the detailed scan decode settings (VLC)
-//
-// INPUT:
-// - bDetail                    = Enable for detailed scan VLC reporting
-// - nX                                 = Start of detailed scan decode MCU X coordinate
-// - nY                                 = Start of detailed scan decode MCU Y coordinate
-// - nLen                               = Number of MCUs to parse in detailed scan decode
-//
-void ImgDecode::SetDetailVlc(bool bDetail, uint32_t nX, uint32_t nY, uint32_t nLen) {
-    m_bDetailVlc = bDetail;
-    m_nDetailVlcX = nX;
-    m_nDetailVlcY = nY;
-    m_nDetailVlcLen = nLen;
-}
-
-// Fetch the pointers for the pixel map
-//
-// OUTPUT:
-// - pMayY                              = Pointer to pixel map for Y component
-// - pMapCb                             = Pointer to pixel map for Cb component
-// - pMapCr                             = Pointer to pixel map for Cr component
-//
-void ImgDecode::GetPixMapPtrs(int16_t *&pMapY, int16_t *&pMapCb, int16_t *&pMapCr) {
-    Q_ASSERT(m_pPixValY);
-    Q_ASSERT(m_pPixValCb);
-    Q_ASSERT(m_pPixValCr);
-    pMapY = m_pPixValY;
-    pMapCb = m_pPixValCb;
-    pMapCr = m_pPixValCr;
-}
-
-// Get image pixel dimensions rounded up to nearest MCU
-//
-// OUTPUT:
-// - nX                                 = X dimension of preview image
-// - nY                                 = Y dimension of preview image
-//
-void ImgDecode::GetImageSize(uint32_t &nX, uint32_t &nY) {
-    nX = m_nImgSizeX;
-    nY = m_nImgSizeY;
-}
-
-// Get the bitmap pointer
-//
-// OUTPUT:
-// - pBitmap                    = Bitmap (DIB) of preview
-//
-void ImgDecode::getBitmapPtr(uint8_t *&pBitmap) {
-    uint8_t *pDibImgTmpBits = 0;
-
-    //@@  pDibImgTmpBits = (uint8_t *) (m_pDibTemp.GetDIBBitArray());
-
-    // Ensure that the pointers are available!
-    if (!pDibImgTmpBits) {
-        pBitmap = 0;
-    } else {
-        pBitmap = pDibImgTmpBits;
-    }
-}
-
-// Determine the file position from a pixel coordinate
-//
-// INPUT:
-// - nPixX                                      = Pixel coordinate (x)
-// - nPixY                                      = Pixel coordinate (y)
-// OUTPUT:
-// - nByte                                      = File offset (byte)
-// - nBit                                       = File offset (bit)
-//
-void ImgDecode::LookupFilePosPix(QPoint p, uint32_t &nByte, uint32_t &nBit) {
-    uint32_t nMcuX, nMcuY;
-    uint32_t nPacked;
-
-    nMcuX = p.x() / m_nMcuWidth;
-    nMcuY = p.y() / m_nMcuHeight;
-    nPacked = m_pMcuFileMap[nMcuX + nMcuY * m_nMcuXMax];
-    unpackFileOffset(nPacked, nByte, nBit);
-}
-
-// Determine the file position from a MCU coordinate
-//
-// INPUT:
-// - nMcuX                                      = MCU coordinate (x)
-// - nMcuY                                      = MCU coordinate (y)
-// OUTPUT:
-// - nByte                                    = File offset (byte)
-// - nBit                                       = File offset (bit)
-//
-void ImgDecode::LookupFilePosMcu(QPoint p, uint32_t &nByte, uint32_t &nBit) {
-    uint32_t nPacked;
-
-    nPacked = m_pMcuFileMap[p.x() + p.y() * m_nMcuXMax];
-    unpackFileOffset(nPacked, nByte, nBit);
-}
-
 // Determine the YCC DC value of a specified block
 //
 // INPUT:
@@ -4499,52 +3701,6 @@ void ImgDecode::LookupBlkYCC(QPoint p, int32_t &nY, int32_t &nCb, int32_t &nCr) 
         nCb = 0;                    // FIXME
         nCr = 0;                    // FIXME
     }
-}
-
-// Convert pixel coordinate to MCU coordinate
-//
-// INPUT:
-// - ptPix                                      = Pixel coordinate
-// RETURN:
-// - MCU coordinate
-//
-QPoint ImgDecode::PixelToMcu(QPoint ptPix) {
-    QPoint ptMcu;
-
-    ptMcu.setX(ptPix.x() / m_nMcuWidth);
-    ptMcu.setY(ptPix.y() / m_nMcuHeight);
-    return ptMcu;
-}
-
-// Convert pixel coordinate to block coordinate
-//
-// INPUT:
-// - ptPix                                      = Pixel coordinate
-// RETURN:
-// - 8x8 block coordinate
-//
-QPoint ImgDecode::PixelToBlk(QPoint ptPix) {
-    QPoint ptBlk;
-
-    ptBlk.setX(ptPix.x() / BLK_SZ_X);
-    ptBlk.setY(ptPix.y() / BLK_SZ_Y);
-    return ptBlk;
-}
-
-// Return the linear MCU offset from an MCU X,Y coord
-//
-// INPUT:
-// - ptMcu                                      = MCU coordinate
-// PRE:
-// - m_nMcuXMax
-// RETURN:
-// - Index of MCU from start of MCUs
-//
-uint32_t ImgDecode::McuXyToLinear(QPoint ptMcu) {
-    uint32_t nLinear;
-
-    nLinear = ((ptMcu.y() * m_nMcuXMax) + ptMcu.x());
-    return nLinear;
 }
 
 // Create a file offset notation that represents bytes and bits
@@ -4657,47 +3813,6 @@ void ImgDecode::SetMarkerBlk(QPoint p) {
 
     m_aptMarkersBlk[m_nMarkersBlkNum] = p;
     m_nMarkersBlkNum++;
-}
-
-// Report the DC levels
-// - UNUSED
-//
-// INPUT:
-// - nMcuX                              = MCU x coordinate
-// - nMcuY                              = MCU y coordinate
-// - nMcuLen                    = Number of MCUs to report
-//
-void ImgDecode::reportDcRun(uint32_t nMcuX, uint32_t nMcuY, uint32_t nMcuLen) {
-    // FIXME: Should I be working on MCU level or block level?
-    QString strTmp;
-
-    _log.info("");
-    _log.info("*** Reporting DC Levels ***");
-    strTmp = QString("  Starting MCU   = [%1,%2]")
-        .arg(nMcuX)
-        .arg(nMcuY);
-    strTmp = QString("  Number of MCUs = %1").arg(nMcuLen);
-    _log.info(strTmp);
-    for (uint32_t ind = 0; ind < nMcuLen; ind++) {
-        // TODO: Need some way of getting these values
-        // For now, just rely on bDetailVlcEn & PrintDcCumVal() to report this...
-    }
-}
-
-void ImgDecode::setStatusYccText(const QString &text) {
-    m_strStatusYcc = text;
-}
-
-const QString &ImgDecode::getStatusYccText() const {
-    return m_strStatusYcc;
-}
-
-void ImgDecode::setStatusMcuText(const QString &text) {
-    m_strStatusMcu = text;
-}
-
-const QString &ImgDecode::getStatusMcuText() const {
-    return m_strStatusMcu;
 }
 
 void ImgDecode::setStatusFilePosText(const QString &text) {

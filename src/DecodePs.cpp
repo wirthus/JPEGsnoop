@@ -18,9 +18,6 @@
 
 #include "DecodePs.h"
 
-#include <QImage>
-
-#include "Snoop.h"
 #include "WindowBuf.h"
 
 // Forward declarations
@@ -272,7 +269,6 @@ DecodePs::DecodePs(WindowBuf *pWBuf, ILog *pLog) :
     // FIXME: Need to allow user control over this setting
     m_bDisplayLayer = false;
     m_nDisplayLayerInd = 0;
-    m_bDisplayImage = true;
 
     Reset();
 }
@@ -284,8 +280,7 @@ void DecodePs::Reset() {
     m_bAbort = false;
 }
 
-DecodePs::~DecodePs(void) {
-}
+DecodePs::~DecodePs(void) = default;
 
 // Provide a short-hand alias for the m_pWBuf buffer
 // INPUT:
@@ -300,89 +295,6 @@ DecodePs::~DecodePs(void) {
 //
 uint8_t DecodePs::Buf(uint32_t offset, bool bClean = false) {
     return m_pWBuf->getByte(offset, bClean);
-}
-
-// Determine if the file is a Photoshop PSD
-// If so, parse the headers. Generally want to start at start of file (nPos=0).
-bool DecodePs::DecodePsd(uint32_t nPos, QImage *pDibTemp, int32_t &nWidth, int32_t &nHeight) {
-    QString strTmp;
-    QString strSig;
-
-    m_bPsd = false;
-
-    uint32_t nVer;
-
-    strSig = m_pWBuf->readStrN(nPos, 4);
-    nPos += 4;
-    nVer = m_pWBuf->getData2(nPos, PS_BSWAP);
-
-    if ((strSig == "8BPS") && (nVer == 1)) {
-        m_bPsd = true;
-        m_pLog->info("");
-        m_pLog->info("*** Photoshop PSD File Decoding ***");
-        m_pLog->info("Decoding Photoshop format...");
-        m_pLog->info("");
-    } else {
-        return false;
-    }
-
-    // Rewind back to header (signature)
-    nPos -= 6;
-
-    bool bDecOk = true;
-
-    tsImageInfo sImageInfo;
-
-    PhotoshopParseFileHeader(nPos, 3, &sImageInfo);
-    nWidth = sImageInfo.nImageWidth;
-    nHeight = sImageInfo.nImageHeight;
-
-    PhotoshopParseColorModeSection(nPos, 3);
-
-    if (bDecOk)
-        bDecOk &= PhotoshopParseImageResourcesSection(nPos, 3);
-
-    if (bDecOk)
-        bDecOk &= PhotoshopParseLayerMaskInfo(nPos, 3, pDibTemp);
-
-    if (bDecOk) {
-        unsigned char *pDibBits = nullptr;
-
-#ifdef PS_IMG_DEC_EN
-        if ((pDibTemp) && (m_bDisplayImage)) {
-            // Allocate the device-independent bitmap (DIB)
-            // - Although we are creating a 32-bit DIB, it should also
-            //   work to run in 16- and 8-bit modes
-
-            // Start by killing old DIB since we might be changing its dimensions
-            //@@      pDibTemp->Kill();
-
-            // Allocate the new DIB
-            //@@      bool bDibOk = pDibTemp->CreateDIB(nWidth, nHeight, 32);
-
-            // Should only return false if already exists or failed to allocate
-            //@@     if(bDibOk)
-            {
-                // Fetch the actual pixel array
-                //@@        pDibBits = (unsigned char *) (pDibTemp->GetDIBBitArray());
-            }
-
-            pDibTemp = new QImage(nWidth, nHeight, QImage::Format_RGB32);
-        }
-#endif
-
-        bDecOk &= PhotoshopParseImageData(nPos, 3, &sImageInfo, pDibBits);
-        PhotoshopParseReportFldOffset(3, "Image data decode complete:", nPos);
-    }
-
-    PhotoshopParseReportNote(3, "");
-
-    if (!bDecOk) {
-        m_pLog->error("ERROR: There was a problem during decode. Aborting.");
-        return false;
-    }
-
-    return true;
 }
 
 // Locate a field ID in the constant 8BIM / Image Resource array
@@ -481,7 +393,6 @@ QString DecodePs::DecodeIptcValue(teIptcType eIptcType, uint32_t nFldCnt, uint32
     uint32_t nInd;
     uint32_t nVal;
 
-    QString strField = "";
     QString strByte = "";
     QString strVal = "";
 
@@ -533,10 +444,8 @@ QString DecodePs::DecodeIptcValue(teIptcType eIptcType, uint32_t nFldCnt, uint32
 void DecodePs::DecodeIptc(uint32_t &nPos, uint32_t nLen, uint32_t nIndent) {
     QString strIndent;
     QString strTmp;
-    QString strIptcTypeName;
     QString strIptcField;
     QString strIptcVal;
-    QString strByte;
 
     uint32_t nPosStart;
 
@@ -1139,8 +1048,6 @@ void DecodePs::PhotoshopParseVersionInfo(uint32_t &nPos, uint32_t nIndent) {
 void DecodePs::PhotoshopParsePrintScale(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
 
-    QString strVal;
-
     nVal = m_pWBuf->getData2(nPos, PS_BSWAP);
     PhotoshopParseReportFldEnum(nIndent, "Style", BIM_T_ENUM_PRINT_SCALE_STYLE, nVal);
     nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
@@ -1161,8 +1068,6 @@ void DecodePs::PhotoshopParsePrintScale(uint32_t &nPos, uint32_t nIndent) {
 void DecodePs::PhotoshopParseGlobalAngle(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
 
-    QString strVal;
-
     nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Global Angle", nVal, "degrees");
 }
@@ -1177,8 +1082,6 @@ void DecodePs::PhotoshopParseGlobalAngle(uint32_t &nPos, uint32_t nIndent) {
 void DecodePs::PhotoshopParseGlobalAltitude(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
 
-    QString strVal;
-
     nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Global Altitude", nVal, "");
 }
@@ -1192,8 +1095,6 @@ void DecodePs::PhotoshopParseGlobalAltitude(uint32_t &nPos, uint32_t nIndent) {
 //
 void DecodePs::PhotoshopParsePrintFlags(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
-
-    QString strVal;
 
     nVal = m_pWBuf->getData1(nPos, PS_BSWAP);
     PhotoshopParseReportFldBool(nIndent, "Labels", nVal);
@@ -1225,8 +1126,6 @@ void DecodePs::PhotoshopParsePrintFlags(uint32_t &nPos, uint32_t nIndent) {
 void DecodePs::PhotoshopParsePrintFlagsInfo(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
 
-    QString strVal;
-
     nVal = m_pWBuf->getData2(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Version", nVal, "");
     nVal = m_pWBuf->getData1(nPos, PS_BSWAP);
@@ -1249,8 +1148,6 @@ void DecodePs::PhotoshopParsePrintFlagsInfo(uint32_t &nPos, uint32_t nIndent) {
 void DecodePs::PhotoshopParseCopyrightFlag(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
 
-    QString strVal;
-
     nVal = m_pWBuf->getData1(nPos, PS_BSWAP);
     PhotoshopParseReportFldBool(nIndent, "Copyright flag", nVal);
 }
@@ -1264,8 +1161,6 @@ void DecodePs::PhotoshopParseCopyrightFlag(uint32_t &nPos, uint32_t nIndent) {
 //
 void DecodePs::PhotoshopParsePixelAspectRatio(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal, nVal1, nVal2;
-
-    QString strVal;
 
     nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Version", nVal, "");
@@ -1283,8 +1178,6 @@ void DecodePs::PhotoshopParsePixelAspectRatio(uint32_t &nPos, uint32_t nIndent) 
 //
 void DecodePs::PhotoshopParseDocSpecificSeed(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
-
-    QString strVal;
 
     nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Base value", nVal, "");
@@ -1339,7 +1232,7 @@ void DecodePs::PhotoshopParseGridGuides(uint32_t &nPos, uint32_t nIndent) {
 void DecodePs::PhotoshopParseResolutionInfo(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal, nUnit;
 
-    QString strVal, strUnit;
+    QString strUnit;
 
     nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
     nUnit = m_pWBuf->getData2(nPos, PS_BSWAP);
@@ -1364,8 +1257,6 @@ void DecodePs::PhotoshopParseResolutionInfo(uint32_t &nPos, uint32_t nIndent) {
 //
 void DecodePs::PhotoshopParseLayerStateInfo(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
-
-    QString strVal;
 
     nVal = m_pWBuf->getData2(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Target layer", nVal, "");
@@ -1442,8 +1333,6 @@ void DecodePs::PhotoshopParseLayerGroupEnabled(uint32_t &nPos, uint32_t nIndent,
 void DecodePs::PhotoshopParseLayerSelectId(uint32_t &nPos, uint32_t nIndent) {
     uint32_t nVal;
 
-    QString strVal;
-
     uint32_t nNumLayer = m_pWBuf->getData2(nPos, PS_BSWAP);
 
     PhotoshopParseReportFldNum(nIndent, "Num selected", nNumLayer, "");
@@ -1465,8 +1354,6 @@ void DecodePs::PhotoshopParseFileHeader(uint32_t &nPos, uint32_t nIndent, tsImag
     Q_ASSERT(psImageInfo);
 
     uint32_t nVal;
-
-    QString strVal;
 
     PhotoshopParseReportNote(nIndent, "File Header Section:");
     nIndent++;
@@ -1507,8 +1394,6 @@ void DecodePs::PhotoshopParseFileHeader(uint32_t &nPos, uint32_t nIndent, tsImag
 // - nPos               = File position after reading the block
 //
 void DecodePs::PhotoshopParseColorModeSection(uint32_t &nPos, uint32_t nIndent) {
-    QString strVal;
-
     PhotoshopParseReportNote(nIndent, "Color Mode Data Section:");
     nIndent++;
 
@@ -1535,8 +1420,6 @@ void DecodePs::PhotoshopParseColorModeSection(uint32_t &nPos, uint32_t nIndent) 
 // - nPos               = File position after reading the block
 //
 bool DecodePs::PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, QImage *pDibTemp) {
-    QString strVal;
-
     bool bDecOk = true;
 
     PhotoshopParseReportNote(nIndent, "Layer and Mask Information Section:");
@@ -1583,8 +1466,6 @@ bool DecodePs::PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, QIm
 // - nPos               = File position after reading the block
 //
 bool DecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, QImage *pDibTemp) {
-    QString strVal;
-
     bool bDecOk = true;
 
     PhotoshopParseReportNote(nIndent, "Layer Info:");
@@ -1654,27 +1535,6 @@ bool DecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, QImage 
         nHeight = sLayerAllInfo.psLayers[nLayerInd].nHeight;
 
         unsigned char *pDibBits = nullptr;
-
-#ifdef PS_IMG_DEC_EN
-        if ((pDibTemp) && (m_bDisplayLayer) && (nLayerInd == m_nDisplayLayerInd)) {
-            // Allocate the device-independent bitmap (DIB)
-            // - Although we are creating a 32-bit DIB, it should also
-            //   work to run in 16- and 8-bit modes
-
-            // Start by killing old DIB since we might be changing its dimensions
-            //@@      pDibTemp->Kill();
-
-            // Allocate the new DIB
-            //@@      bool bDibOk = pDibTemp->CreateDIB(nWidth, nHeight, 32);
-
-            // Should only return false if already exists or failed to allocate
-            //@@      if(bDibOk)
-            {
-                // Fetch the actual pixel array
-                //@@        pDibBits = (unsigned char *) (pDibTemp->GetDIBBitArray());
-            }
-        }
-#endif
 
         nPosLastLayer = nPos;
 
@@ -1854,8 +1714,6 @@ bool DecodePs::PhotoshopParseLayerRecord(uint32_t &nPos, uint32_t nIndent, tsLay
 // - nPos               = File position after reading the block
 //
 bool DecodePs::PhotoshopParseLayerMask(uint32_t &nPos, uint32_t nIndent) {
-    QString strVal;
-
     bool bDecOk = true;
 
     PhotoshopParseReportNote(nIndent, "Layer Mask / Adjustment layer data:");
@@ -2023,46 +1881,22 @@ bool DecodePs::PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent, 
     return bDecOk;
 }
 
-bool
-DecodePs::PhotoshopDecodeRowUncomp(uint32_t &nPos, uint32_t nWidth, uint32_t nHeight, uint32_t nRow, uint32_t nChanID,
-                                   unsigned char *pDibBits) {
+bool DecodePs::PhotoshopDecodeRowUncomp(uint32_t &nPos, uint32_t nWidth, uint32_t nHeight, uint32_t nRow, uint32_t nChanID,
+                                        unsigned char *pDibBits) {
     bool bDecOk = true;
 
     unsigned char nVal;
 
-    uint32_t nRowActual;
-
-    uint32_t nPixByte;
-
     for (uint32_t nCol = 0; (bDecOk) && (nCol < nWidth); nCol++) {
         nVal = m_pWBuf->getData1(nPos, PS_BSWAP);
 
-#ifdef PS_IMG_DEC_EN
-        if (pDibBits) {
-            nRowActual = nHeight - nRow - 1;  // Need to flip vertical for DIB
-            nPixByte = (nRowActual * nWidth + nCol) * sizeof(QRgb);
-
-            // Assign the RGB pixel map
-            pDibBits[nPixByte + 3] = 0;
-
-            if (nChanID == 0) {
-                pDibBits[nPixByte + 2] = nVal;
-            } else if (nChanID == 1) {
-                pDibBits[nPixByte + 1] = nVal;
-            } else if (nChanID == 2) {
-                pDibBits[nPixByte + 0] = nVal;
-            } else {
-            }
-        }                           // pDibBits
-#endif
     }                             // nCol
 
     return bDecOk;
 }
 
-bool
-DecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t nHeight, uint32_t nRow, uint32_t nRowLen,
-                                uint32_t nChanID, unsigned char *pDibBits) {
+bool DecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t nHeight, uint32_t nRow, uint32_t nRowLen,
+                                     uint32_t nChanID, unsigned char *pDibBits) {
     bool bDecOk = true;
 
     char nRleRunS;
@@ -2074,8 +1908,6 @@ DecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t nHeigh
     uint32_t nRowOffsetComp;      // Row offset (compressed size)
     uint32_t nRowOffsetDecomp;    // Row offset (decompressed size)
     uint32_t nRowOffsetDecompLast;
-    uint32_t nRowActual;
-    uint32_t nPixByte;
 
     // Decompress the row data
     nRowOffsetComp = 0;
@@ -2097,28 +1929,6 @@ DecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t nHeigh
             nRleVal = m_pWBuf->getData1(nPos, PS_BSWAP);
             nRowOffsetComp++;
             nRowOffsetDecomp += nRleRunCnt;
-
-#ifdef PS_IMG_DEC_EN
-            if (pDibBits) {
-                nRowActual = nHeight - nRow - 1;        // Need to flip vertical for DIB
-
-                for (uint32_t nRunInd = 0; nRunInd < nRleRunCnt; nRunInd++) {
-                    nPixByte = (nRowActual * nWidth + nRowOffsetDecompLast + nRunInd) * sizeof(QRgb);
-
-                    // Assign the RGB pixel map
-                    pDibBits[nPixByte + 3] = 0;
-
-                    if (nChanID == 0) {
-                        pDibBits[nPixByte + 2] = nRleVal;
-                    } else if (nChanID == 1) {
-                        pDibBits[nPixByte + 1] = nRleVal;
-                    } else if (nChanID == 2) {
-                        pDibBits[nPixByte + 0] = nRleVal;
-                    } else {
-                    }
-                }                       // nRunInd
-            }                         // pDibBits
-#endif
         } else {
             // Copy the next bytes as-is
             nRleRunCnt = 1 + nRleRunS;
@@ -2127,26 +1937,6 @@ DecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t nHeigh
                 nRleVal = m_pWBuf->getData1(nPos, PS_BSWAP);
                 nRowOffsetComp++;
                 nRowOffsetDecomp++;
-
-#ifdef PS_IMG_DEC_EN
-                if (pDibBits) {
-                    nRowActual = nHeight - nRow - 1;      // Need to flip vertical for DIB
-                    nPixByte = (nRowActual * nWidth + nRowOffsetDecompLast + nRunInd) * sizeof(QRgb);
-
-                    // Assign the RGB pixel map
-                    pDibBits[nPixByte + 3] = 0;
-
-                    if (nChanID == 0) {
-                        pDibBits[nPixByte + 2] = nRleVal;
-                    } else if (nChanID == 1) {
-                        pDibBits[nPixByte + 1] = nRleVal;
-                    } else if (nChanID == 2) {
-                        pDibBits[nPixByte + 0] = nRleVal;
-                    } else {
-                    }
-                }                       // pDibBits
-#endif
-
             }                         // nRunInd
         }                           // nRleRunS
     }                             // nRowOffsetComp

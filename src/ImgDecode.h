@@ -33,9 +33,7 @@
 #ifndef JPEGSNOOP_IMGDECODE_H
 #define JPEGSNOOP_IMGDECODE_H
 
-#include <QPoint>
 #include <QString>
-#include <QRect>
 
 #include <map>
 
@@ -241,51 +239,6 @@ typedef struct {
     uint32_t nClipWhiteOver;
 } PixelCcClip;
 
-// Min-max and average pixel stats for histogram
-typedef struct {
-    int32_t nPreclipYMin;
-    int32_t nPreclipYMax;
-    int32_t nPreclipYSum;
-    int32_t nPreclipCbMin;
-    int32_t nPreclipCbMax;
-    int32_t nPreclipCbSum;
-    int32_t nPreclipCrMin;
-    int32_t nPreclipCrMax;
-    int32_t nPreclipCrSum;
-
-    int32_t nClipYMin;
-    int32_t nClipYMax;
-    int32_t nClipYSum;
-    int32_t nClipCbMin;
-    int32_t nClipCbMax;
-    int32_t nClipCbSum;
-    int32_t nClipCrMin;
-    int32_t nClipCrMax;
-    int32_t nClipCrSum;
-
-    int32_t nClipRMin;
-    int32_t nClipRMax;
-    int32_t nClipRSum;
-    int32_t nClipGMin;
-    int32_t nClipGMax;
-    int32_t nClipGSum;
-    int32_t nClipBMin;
-    int32_t nClipBMax;
-    int32_t nClipBSum;
-
-    int32_t nPreclipRMin;
-    int32_t nPreclipRMax;
-    int32_t nPreclipRSum;
-    int32_t nPreclipGMin;
-    int32_t nPreclipGMax;
-    int32_t nPreclipGSum;
-    int32_t nPreclipBMin;
-    int32_t nPreclipBMax;
-    int32_t nPreclipBSum;
-
-    uint32_t nCount;
-} PixelCcHisto;
-
 class ImgDecode : public QObject {
 Q_OBJECT
     Q_DISABLE_COPY(ImgDecode)
@@ -299,22 +252,10 @@ public:
 
     void decodeScanImg(uint32_t startPosition, bool display, bool quiet);
 
-    void reportColorStats();
-
-    bool isImgDecoded() const;
-
-    bool isPreviewReady() const;
-    void setPreviewReady(bool ready);
-
-    bool isDibTempReady() const;
-    void setDibTempReady(bool ready);
-
     // Config
-    void setImageDimensions(uint32_t nWidth, uint32_t nHeight);
     void setImageDetails(uint32_t nDimX, uint32_t nDimY, uint32_t nCompsSOF, uint32_t nCompsSOS, bool bRstEn,
                          uint32_t nRstInterval);
     void SetSofSampFactors(uint32_t nCompInd, uint32_t nSampFactH, uint32_t nSampFactV);
-    void ResetImageContent();
 
     bool setDqtEntry(uint32_t nTblDestId, uint32_t nCoeffInd, uint32_t nCoeffIndZz, uint16_t nCoeffVal);
     bool SetDqtTables(uint32_t nCompInd, uint32_t nTbl);
@@ -326,31 +267,11 @@ public:
     void SetPrecision(uint32_t nPrecision);
 
     // Utilities
-    void LookupFilePosPix(QPoint p, uint32_t &nByte, uint32_t &nBit);
-    void LookupFilePosMcu(QPoint p, uint32_t &nByte, uint32_t &nBit);
     void LookupBlkYCC(QPoint p, int32_t &nY, int32_t &nCb, int32_t &nCr);
 
     void SetMarkerBlk(QPoint p);
     uint32_t GetMarkerCount();
     QPoint GetMarkerBlk(uint32_t nInd);
-
-    QPoint PixelToMcu(QPoint ptPix);
-    QPoint PixelToBlk(QPoint ptPix);
-    uint32_t McuXyToLinear(QPoint ptMcu);
-    void GetImageSize(uint32_t &nX, uint32_t &nY);
-
-    // View helper routines
-    // void ViewOnDraw(QPainter *pDC, QRect rectClient, QPoint ptScrolledPos, QFont *pFont, QSize &szNewScrollSize);
-    // void ViewMcuOverlay(QPainter *pDC);
-    // void ViewMcuMarkedOverlay(QPainter *pDC);
-    // void ViewMarkerOverlay(QPainter *pDC, uint32_t nBlkX, uint32_t nBlkY);       // UNUSED?
-
-    void GetPixMapPtrs(int16_t *&pMapY, int16_t *&pMapCb, int16_t *&pMapCr);
-    void GetDetailVlc(bool &bDetail, uint32_t &nX, uint32_t &nY, uint32_t &nLen);
-    void SetDetailVlc(bool bDetail, uint32_t nX, uint32_t nY, uint32_t nLen);
-
-    void GetPreviewPos(uint32_t &nX, uint32_t &nY);
-    void GetPreviewSize(uint32_t &nX, uint32_t &nY);
 
     void ScanErrorsDisable();
     void ScanErrorsEnable();
@@ -358,35 +279,20 @@ public:
     uint32_t packFileOffset(uint32_t nByte, uint32_t nBit);
     void unpackFileOffset(uint32_t nPacked, uint32_t &nByte, uint32_t &nBit);
 
-    void getBitmapPtr(uint8_t *&pBitmap);
-
     // Miscellaneous
     void setStatusText(const QString &text);
-
-    void setStatusYccText(const QString &text);
-    const QString &getStatusYccText() const;
-
-    void setStatusMcuText(const QString &text);
-    const QString &getStatusMcuText() const;
 
     void setStatusFilePosText(const QString &text);
     const QString &getStatusFilePosText() const;
 
     void reportDctMatrix();
     void reportVlc(uint32_t nVlcPos, uint32_t nVlcAlign, uint32_t nZrl, int32_t nVal, uint32_t nCoeffStart, uint32_t nCoeffEnd, const QString &specialStr);
-    void printDcCumVal(uint32_t nMcuX, uint32_t nMcuY, int32_t nVal);
-    void reportDcRun(uint32_t nMcuX, uint32_t nMcuY, uint32_t nMcuLen);
 
 signals:
     void updateStatus(const QString &statusMsg, int);
     void updateImage();
 
 private:
-    bool _imgDecoded;
-    bool _dibTempReady;
-    bool _isPreviewReady;    // Is the preview image from decoded JPEG?
-    QImage *_dibTemp;       // Temporary version for display
-
     // DQT Table
     uint16_t m_anDqtCoeff[MAX_DQT_DEST_ID][MAX_DQT_COEFF];  // Normal ordering
     uint16_t m_anDqtCoeffZz[MAX_DQT_DEST_ID][MAX_DQT_COEFF];        // Original zigzag ordering
@@ -405,14 +311,6 @@ private:
 
     QString getScanBufPos();
     QString getScanBufPos(uint32_t pos, uint32_t align);
-
-    void ConvertYCCtoRGB(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix);
-    void ConvertYCCtoRGBFastFloat(PixelCc &sPix);
-    void ConvertYCCtoRGBFastFixed(PixelCc &sPix);
-
-    void ScanYccToRgb();
-    void CapYccRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix);
-    void CapRgbRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix);
 
     void GenLookupHuffMask();
     uint32_t ExtractBits(uint32_t nWord, uint32_t nBits);
@@ -448,7 +346,6 @@ private:
     WindowBuf &_wbuf;
     SnoopConfig &_appConfig;        // Pointer to application config
 
-
     uint32_t *m_pMcuFileMap;
     int32_t m_nMcuWidth;         // Width (pix) of MCU (e.g. 8,16)
     int32_t m_nMcuHeight;        // Height (pix) of MCU (e.g. 8,16)
@@ -468,35 +365,16 @@ private:
     int16_t *m_pBlkDcValCb;         // Block DC value
     int16_t *m_pBlkDcValCr;         // Block DC value
 
-    // TODO: Later use these to support frequency spectrum
-    // display of image data
-    int16_t *m_pBlkFreqY;           // 8x8 Block frequency value
-    int16_t *m_pBlkFreqCb;          // 8x8 Block frequency value
-    int16_t *m_pBlkFreqCr;          // 8x8 Block frequency value
-
     // Array that indicates whether or not a block has been marked
     // This is generally used to mark ranges for the detailed scan decode feature
     uint32_t m_nMarkersBlkNum;    // Number of 8x8 Block markers
     QPoint m_aptMarkersBlk[MAX_BLOCK_MARKERS];    // MCU Markers
 
-    QString m_strStatusYcc;       // Status bar text: YCC
-    QString m_strStatusMcu;       // Status bar text: MCU
     QString m_strStatusFilePos;   // Status bar text: File Position
     QString m_strTitle;           // Image title
 
-
-    int32_t m_nImgSizeXPartMcu;  // Image size with possible partial MCU
-    int32_t m_nImgSizeYPartMcu;
     int32_t m_nImgSizeX;         // Image size rounding up to full MCU
     int32_t m_nImgSizeY;
-
-    // Image rects
-    QRect m_rectImgBase;          // Image with no offset, no scaling
-    QRect m_rectImgReal;          // Image with scaling & offset
-    QRect m_rectHistBase;         // Hist with no offset
-    QRect m_rectHistReal;         // Hist with offset
-    QRect m_rectHistYBase;        // HistY with no offset
-    QRect m_rectHistYReal;        // HistY with offset
 
     // Decoder DC state
     // Tables use signed to help flag undefined table indices
@@ -510,19 +388,10 @@ private:
     bool m_bScanBad;              // Any errors found?
     uint32_t _scanErrMax;       // Max # scan decode errors shown
 
-    bool m_bDibHistRgbReady;
-    QImage *m_pDibHistRgb;
-
-    bool m_bDibHistYReady;
-    QImage *m_pDibHistY;
-
     bool m_bDetailVlc;
     uint32_t m_nDetailVlcX;
     uint32_t m_nDetailVlcY;
     uint32_t m_nDetailVlcLen;
-
-    uint32_t m_nZoomMode;
-    double m_nZoom;
 
     // Image details (from JFIF decode) set by SetImageDetails()
     bool m_bImgDetailsSet;        // Have image details been set yet (from SOS)
@@ -545,17 +414,6 @@ private:
     bool m_bRestartEn;            // Did decoder see DRI?
     int32_t m_nRestartInterval;  // ... if so, what is the MCU interval
     int32_t m_nRestartRead;      // Number RST read during m_nScanBuff
-
-    // Test shifting of YCC for ChannelPreview()
-    int32_t m_nPreviewShiftY;
-    int32_t m_nPreviewShiftCb;
-    int32_t m_nPreviewShiftCr;
-    int32_t m_nPreviewShiftMcuX; // Start co-ords of shift
-    int32_t m_nPreviewShiftMcuY;
-
-    uint32_t m_nPreviewInsMcuX;   // Test blank MCU insert
-    uint32_t m_nPreviewInsMcuY;
-    uint32_t m_nPreviewInsMcuLen;
 
     bool _decodeScanAc;       // User request decode of AC components?
 
@@ -620,41 +478,14 @@ private:
     uint32_t m_nRestartExpectInd; // Next Restart marker expected (0..7)
     uint32_t m_nRestartMcusLeft;  // How many MCUs until next RST?
 
-    bool _skipDone;
-    uint32_t _skipCount;
-    uint32_t _skipData;
-
     bool _verbose;
-    uint32_t m_nWarnYccClipNum;
     uint32_t m_nWarnBadScanNum;
 
     uint32_t m_nScanBitsUsed1;
     uint32_t m_nScanBitsUsed2;
 
     // Image Analysis, histograms
-    bool _statClipEnabled;           // UNUSED: Enable scan clipping stats?
     uint32_t m_nNumPixels;
-    PixelCcHisto m_sHisto;        // YCC/RGB histogram (min/max/avg)
-    PixelCcClip m_sStatClip;      // YCC/RGB clipping stats
-
-    uint32_t m_anCcHisto_r[HISTO_BINS];
-    uint32_t m_anCcHisto_g[HISTO_BINS];
-    uint32_t m_anCcHisto_b[HISTO_BINS];
-
-    // For image similarity analysis
-    uint32_t m_anHistoYFull[FULL_HISTO_BINS];
-    uint32_t m_anHistoYSubset[FULL_HISTO_BINS];
-
-    // For View management
-    int32_t m_nPageHeight;
-    int32_t m_nPageWidth;
-
-    uint32_t m_nPreviewPosX;      // Top-left coord of preview image
-    uint32_t m_nPreviewPosY;      // Top-left coord of preview image
-    uint32_t m_nPreviewSizeX;     // X dimension of preview image
-    uint32_t m_nPreviewSizeY;     // Y dimension of preview image
-
-    bool m_bViewOverlaysMcuGrid;  // Do we enable MCU Grid Overlay
 };
 
 #endif

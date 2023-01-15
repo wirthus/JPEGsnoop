@@ -158,7 +158,6 @@ public:
 
     bool m_bDisplayLayer;
     uint32_t m_nDisplayLayerInd;
-    bool m_bDisplayImage;
 
 private:
     DecodePs &operator=(const DecodePs &);
