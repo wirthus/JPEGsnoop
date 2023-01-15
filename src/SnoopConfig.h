@@ -54,10 +54,6 @@ public:
 
     bool decodeMaker() const { return _decodeMaker; }
 
-    bool displayRgbHistogram() const { return _histogramEnabled; }
-
-    bool displayYHistogram() const { return _dumpHistogramY; }
-
     bool expandDht() const { return _outputDhtExpand; }
 
     bool hideUnknownExif() const { return _exifHideUnknown; }
@@ -82,9 +78,7 @@ private:
     bool _outputScanDump;          // Do we dump a portion of scan data?
     bool _outputDhtExpand;
     bool _decodeMaker;
-    bool _histogramEnabled;        // Histogram calcs enabled?
     bool _statClipEnabled;         // Enable scan decode clip stats?
-    bool _dumpHistogramY;          // Dump full Y DC Histogram
     bool _exifHideUnknown;         // Hide unknown exif tags?
     bool _relaxedParsing;          // Proceed despite bad marker / format?
 

@@ -53,7 +53,6 @@ ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject
     m_bDibHistRgbReady = false;
     m_bDibHistYReady = false;
 
-    _histogramEnabled = false;
     _statClipEnabled = false;        // UNUSED
 
     m_pMcuFileMap = nullptr;
@@ -111,6 +110,18 @@ ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject
     //  setStyleSheet("background-color: white");
 }
 
+// Destructor for Image Decode class
+// - Deallocate any image-related dynamic storage
+ImgDecode::~ImgDecode() {
+    deleteAndNullBlk(m_pMcuFileMap);
+    deleteAndNullBlk(m_pBlkDcValY);
+    deleteAndNullBlk(m_pBlkDcValCb);
+    deleteAndNullBlk(m_pBlkDcValCr);
+    deleteAndNullBlk(m_pPixValY);
+    deleteAndNullBlk(m_pPixValCb);
+    deleteAndNullBlk(m_pPixValCr);
+}
+
 // Reset decoding state for start of new decode
 // Note that we don't touch the DQT or DHT entries as
 // those are set at different times versus reset (sometimes
@@ -150,17 +161,10 @@ void ImgDecode::reset() {
     _imgDecoded = false;
 
     // If a DIB has been generated, release it!
-    if (_dibTempReady) {
-        _dibTempReady = false;
-    }
+    _dibTempReady = false;
 
-    if (m_bDibHistRgbReady) {
-        m_bDibHistRgbReady = false;
-    }
-
-    if (m_bDibHistYReady) {
-        m_bDibHistYReady = false;
-    }
+    m_bDibHistRgbReady = false;
+    m_bDibHistYReady = false;
 
     deleteAndNullBlk(m_pMcuFileMap);
     deleteAndNullBlk(m_pBlkDcValY);
@@ -183,28 +187,8 @@ void ImgDecode::reset() {
     m_nPreviewSizeY = 0;
 }
 
-// Destructor for Image Decode class
-// - Deallocate any image-related dynamic storage
-ImgDecode::~ImgDecode() {
-    deleteAndNullBlk(m_pMcuFileMap);
-    deleteAndNullBlk(m_pBlkDcValY);
-    deleteAndNullBlk(m_pBlkDcValCb);
-    deleteAndNullBlk(m_pBlkDcValCr);
-    deleteAndNullBlk(m_pPixValY);
-    deleteAndNullBlk(m_pPixValCb);
-    deleteAndNullBlk(m_pPixValCr);
-}
-
 bool ImgDecode::isImgDecoded() const {
     return _imgDecoded;
-}
-
-bool ImgDecode::isYHistogramReady() const {
-    return m_bDibHistYReady;
-}
-
-bool ImgDecode::isRgbHistogramReady() const {
-    return m_bDibHistRgbReady;
 }
 
 bool ImgDecode::isDibTempReady() const {
@@ -213,7 +197,7 @@ bool ImgDecode::isDibTempReady() const {
 
 void ImgDecode::setDibTempReady(bool ready) {
     _dibTempReady = ready;
-};
+}
 
 // Reset the major parameters
 // - Called by JFIF Decoder when we begin a new file
@@ -823,11 +807,11 @@ bool ImgDecode::SetDhtEntry(uint32_t nDestId, uint32_t nClass, uint32_t nInd, ui
         //     msgBox.setText(strTmp);
         //     msgBox.exec();
         // }
-// #ifdef DEBUG_LOG
+        // #ifdef DEBUG_LOG
         _log.debug(QString("## Block = %1 Error = %2").arg("ImgDecode", strTmp));
-// #else
-//         Q_ASSERT(false);
-// #endif
+        // #else
+        //         Q_ASSERT(false);
+        // #endif
         return false;
     }
 
@@ -2820,7 +2804,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     bool bDieOnFirstErr = false;  // FIXME: do we want this? It makes it less useful for corrupt jpegs
 
     // Fetch configuration values locally
-    bool bDumpHistoY = _appConfig.displayYHistogram();
     bool decodeScanAc;
 
     // Add some extra speed-up in hidden mode (we don't need AC)
@@ -2830,7 +2813,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
         decodeScanAc = false;
     }
 
-    _histogramEnabled = _appConfig.displayRgbHistogram();
     _statClipEnabled = _appConfig.clipStats();
 
     int32_t nPixMapW = 0;
@@ -2981,57 +2963,17 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     // Allocate the MCU File Map
     Q_ASSERT(m_pMcuFileMap == 0);
     m_pMcuFileMap = new uint32_t[m_nMcuYMax * m_nMcuXMax];
-
-    if (!m_pMcuFileMap) {
-        strTmp = "ERROR: Not enough memory for Image Decoder MCU File Pos Map";
-        _log.error(strTmp);
-
-        // if (m_pAppConfig->isInteractive()) {
-        //     msgBox.setText(strTmp);
-        //     msgBox.exec();
-        // }
-
-        return;
-    }
-
     memset(m_pMcuFileMap, 0, (m_nMcuYMax * m_nMcuXMax * sizeof(int32_t)));
 
     // Allocate the 8x8 Block DC Map
     m_pBlkDcValY = new int16_t[m_nBlkYMax * m_nBlkXMax];
-
-    if ((!m_pBlkDcValY)) {
-        strTmp = "ERROR: Not enough memory for Image Decoder Blk DC Value Map";
-        _log.error(strTmp);
-
-        // if (m_pAppConfig->isInteractive()) {
-        //     msgBox.setText(strTmp);
-        //     msgBox.exec();
-        // }
-
-        return;
-    }
-
-    if (m_nNumSosComps == NUM_CHAN_YCC) {
-        m_pBlkDcValCb = new int16_t[m_nBlkYMax * m_nBlkXMax];
-        m_pBlkDcValCr = new int16_t[m_nBlkYMax * m_nBlkXMax];
-
-        if ((!m_pBlkDcValCb) || (!m_pBlkDcValCr)) {
-            strTmp = "ERROR: Not enough memory for Image Decoder Blk DC Value Map";
-            _log.error(strTmp);
-
-            // if (m_pAppConfig->isInteractive()) {
-            //     msgBox.setText(strTmp);
-            //     msgBox.exec();
-            // }
-
-            return;
-        }
-    }
-
     memset(m_pBlkDcValY, 0, (m_nBlkYMax * m_nBlkXMax * sizeof(int16_t)));
 
     if (m_nNumSosComps == NUM_CHAN_YCC) {
+        m_pBlkDcValCb = new int16_t[m_nBlkYMax * m_nBlkXMax];
         memset(m_pBlkDcValCb, 0, (m_nBlkYMax * m_nBlkXMax * sizeof(int16_t)));
+
+        m_pBlkDcValCr = new int16_t[m_nBlkYMax * m_nBlkXMax];
         memset(m_pBlkDcValCr, 0, (m_nBlkYMax * m_nBlkXMax * sizeof(int16_t)));
     }
 
@@ -3040,43 +2982,19 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     nPixMapW = m_nBlkXMax * BLK_SZ_X;
 
     // Ensure no image allocated yet
-    Q_ASSERT(m_pPixValY == 0);
+    Q_ASSERT(m_pPixValY == nullptr);
 
     if (m_nNumSosComps == NUM_CHAN_YCC) {
-        Q_ASSERT(m_pPixValCb == 0);
-        Q_ASSERT(m_pPixValCr == 0);
+        Q_ASSERT(m_pPixValCb == nullptr);
+        Q_ASSERT(m_pPixValCr == nullptr);
     }
 
     // Allocate image (YCC)
     m_pPixValY = new int16_t[nPixMapW * nPixMapH];
 
-    if ((!m_pPixValY)) {
-        strTmp = "ERROR: Not enough memory for Image Decoder Pixel YCC Value Map";
-        _log.error(strTmp);
-
-        // if (m_pAppConfig->isInteractive()) {
-        //     msgBox.setText(strTmp);
-        //     msgBox.exec();
-        // }
-
-        return;
-    }
-
     if (m_nNumSosComps == NUM_CHAN_YCC) {
         m_pPixValCb = new int16_t[nPixMapW * nPixMapH];
         m_pPixValCr = new int16_t[nPixMapW * nPixMapH];
-
-        if ((!m_pPixValCb) || (!m_pPixValCr)) {
-            strTmp = "ERROR: Not enough memory for Image Decoder Pixel YCC Value Map";
-            _log.error(strTmp);
-
-            // if (m_pAppConfig->isInteractive()) {
-            //     msgBox.setText(strTmp);
-            //     msgBox.exec();
-            // }
-
-            return;
-        }
     }
 
     // Reset pixel map
@@ -3110,14 +3028,12 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
 
     if (!quiet) {
         _log.info("*** Decoding SCAN Data ***");
-        strTmp = QString("  OFFSET: 0x%1").arg(startPosition, 8, 16, QChar('0'));
-        _log.info(strTmp);
+        _log.info(QString("  OFFSET: 0x%1").arg(startPosition, 8, 16, QChar('0')));
     }
 
     // TODO: Might be more appropriate to check against m_nNumSosComps instead?
     if ((m_nNumSofComps != NUM_CHAN_GRAYSCALE) && (m_nNumSofComps != NUM_CHAN_YCC)) {
-        strTmp = QString("  NOTE: Number of Image Components not supported [%1]").arg(m_nNumSofComps);
-        _log.warn(strTmp);
+        _log.warn(QString("  Number of Image Components not supported [%1]").arg(m_nNumSofComps));
 #ifndef DEBUG_YCCK
         return;
 #endif
@@ -3228,7 +3144,8 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
             _log.info("  Scan Decode Mode: Full IDCT (AC + DC)");
         } else {
             _log.info("  Scan Decode Mode: No IDCT (DC only)");
-            _log.warn("Low-resolution DC component shown. Can decode full-res with [Options->Scan Segment->Full IDCT]");}
+            _log.warn("Low-resolution DC component shown. Can decode full-res with [Options->Scan Segment->Full IDCT]");
+        }
 
         _log.info("");
     }
@@ -3879,11 +3796,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
 
     // ------------------------------------
 
-    // Display the image histogram if enabled
-    if (display && _histogramEnabled) {
-        // DrawHistogram(quiet, bDumpHistoY);
-    }
-
     if (display && m_bAvgYValid) {
         _log.info("  Average Pixel Luminance (Y):");
         _log.info(QString("    Y=[%1] (range: 0..255)").arg(m_nAvgY, 3));
@@ -3914,15 +3826,6 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
         strTmp = QString("    Next position in scan buffer: Offset %1").arg(getScanBufPos());
         _log.info(strTmp);
         _log.info("");
-    }
-
-    // --------------------------------------
-    // Write out the full Y histogram if requested!
-
-    QString strFull;
-
-    if (display && _histogramEnabled && bDumpHistoY) {
-        reportHistogramY();
     }
 }
 
@@ -3959,65 +3862,6 @@ void ImgDecode::reportColorStats() {
         _log.info("");
     }
 
-    if (_histogramEnabled) {
-        strTmp = QString("  YCC histogram in DC (DCT sums : pre-ranged:");
-        _log.info(strTmp);
-        strTmp = QString("    Y  component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nPreclipYMin, 5)
-            .arg(m_sHisto.nPreclipYMax, 5)
-            .arg(static_cast<double>(m_sHisto.nPreclipYSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        strTmp = QString("    Cb component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nPreclipCbMin, 5)
-            .arg(m_sHisto.nPreclipCbMax, 5)
-            .arg(static_cast<double>(m_sHisto.nPreclipCbSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        strTmp = QString("    Cr component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nPreclipCrMin, 5)
-            .arg(m_sHisto.nPreclipCrMax, 5)
-            .arg(static_cast<double>(m_sHisto.nPreclipCrSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        _log.info("");
-
-        strTmp = QString("  YCC histogram in DC:");
-        _log.info(strTmp);
-        strTmp = QString("    Y  component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nClipYMin, 5)
-            .arg(m_sHisto.nClipYMax, 5)
-            .arg(static_cast<double>(m_sHisto.nClipYSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        strTmp = QString("    Cb component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nClipCbMin, 5)
-            .arg(m_sHisto.nClipCbMax, 5)
-            .arg(static_cast<double>(m_sHisto.nClipCbSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        strTmp = QString("    Cr component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nClipCrMin, 5)
-            .arg(m_sHisto.nClipCrMax, 5)
-            .arg(static_cast<double>(m_sHisto.nClipCrSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        _log.info("");
-
-        strTmp = QString("  RGB histogram in DC (before clip):");
-        _log.info(strTmp);
-        strTmp = QString("    R  component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nPreclipRMin, 5)
-            .arg(m_sHisto.nPreclipRMax, 5)
-            .arg(static_cast<double>(m_sHisto.nPreclipRSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        strTmp = QString("    G  component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nPreclipGMin, 5)
-            .arg(m_sHisto.nPreclipGMax, 5)
-            .arg(static_cast<double>(m_sHisto.nPreclipGSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        strTmp = QString("    B  component histo: [min=%1 max=%2 avg=%3]")
-            .arg(m_sHisto.nPreclipBMin, 5)
-            .arg(m_sHisto.nPreclipBMax, 5)
-            .arg(static_cast<double>(m_sHisto.nPreclipBSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-        _log.info(strTmp);
-        _log.info("");
-    }
-
     strTmp = QString("  RGB clipping in DC:");
     _log.info(strTmp);
     strTmp = QString("    R  component: [<0=%1] [>255=%2]")
@@ -4038,182 +3882,6 @@ void ImgDecode::reportColorStats() {
    */
     _log.info("");
 }
-
-// Report the histogram stats from the Y component
-//
-// PRE:
-// - m_anHistoYFull
-//
-void ImgDecode::reportHistogramY() {
-    QString strFull;
-    QString strTmp;
-
-    _log.info("  Y Histogram in DC: (DCT sums) Full");
-
-    for (uint32_t row = 0; row < 2048 / 8; row++) {
-        strFull = QString("    Y=%1..%2: ")
-            .arg(-1024 + (static_cast<int32_t>(row) * 8), 5)
-            .arg(-1024 + (static_cast<int32_t>(row) * 8) + 7, 5);
-
-        for (uint32_t col = 0; col < 8; col++) {
-            strTmp = QString("0x%1, ").arg(m_anHistoYFull[col + row * 8], 6, 16, QChar('0'));
-            strFull += strTmp;
-        }
-
-        _log.info(strFull);
-    }
-}
-
-// Draw the histograms (RGB and/or Y)
-//
-// INPUT:
-// - bQuiet                                     = Calculate stats without reporting to log?
-// - bDumpHistoY                        = Generate the Y histogram?
-// PRE:
-// - m_sHisto
-//
-// void ImgDecode::DrawHistogram(bool bQuiet, bool bDumpHistoY) {
-//     QString strTmp;
-//
-//     if (!bQuiet) {
-//         strTmp = QString("  RGB histogram in DC (after clip):");
-//         m_pLog->addLine(strTmp);
-//         strTmp = QString("    R  component histo: [min=%1 max=%2 avg=%3]")
-//             .arg(m_sHisto.nClipRMin, 5)
-//             .arg(m_sHisto.nClipRMax, 5)
-//             .arg(static_cast<double>(m_sHisto.nClipRSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-//         m_pLog->addLine(strTmp);
-//         strTmp = QString("    G  component histo: [min=%1 max=%2 avg=%3]")
-//             .arg(m_sHisto.nClipGMin, 5)
-//             .arg(m_sHisto.nClipGMax, 5)
-//             .arg(static_cast<double>(m_sHisto.nClipGSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-//         m_pLog->addLine(strTmp);
-//         strTmp = QString("    B  component histo: [min=%1 max=%2 avg=%3]")
-//             .arg(m_sHisto.nClipBMin, 5)
-//             .arg(m_sHisto.nClipBMax, 5)
-//             .arg(static_cast<double>(m_sHisto.nClipBSum) / static_cast<double>(m_sHisto.nCount), 7, 'f', 1);
-//         m_pLog->addLine(strTmp);
-//         m_pLog->addLine("");
-//     }
-//
-//     // --------------------------------------
-//     // Now draw the RGB histogram!
-//
-//     int32_t nCoordY;
-//     int32_t rgbHistOffset;
-//     int32_t nHistoBinHeight;
-//     int32_t nHistoPeakVal;
-//     int32_t nHistoX;
-//     int32_t nHistoCurVal;
-//
-//     m_bDibHistRgbReady = false;
-//
-//     m_pDibHistRgb = new QImage(HISTO_BINS * HISTO_BIN_WIDTH, 3 * HISTO_BIN_HEIGHT_MAX, QImage::Format_RGB32);
-//     m_pDibHistRgb->fill(Qt::white);
-//
-//     // Do peak detect first
-//     // Don't want to reset peak value to 0 as otherwise we might get
-//     // division by zero later when we calculate nHistoBinHeight
-//     nHistoPeakVal = 1;
-//
-//     // Peak value is across all three channels!
-//     for (int32_t nHistChan = 0; nHistChan < 3; nHistChan++) {
-//         for (int32_t i = 0; i < HISTO_BINS; i++) {
-//             if (nHistChan == 0) {
-//                 nHistoCurVal = m_anCcHisto_r[i];
-//             } else if (nHistChan == 1) {
-//                 nHistoCurVal = m_anCcHisto_g[i];
-//             } else {
-//                 nHistoCurVal = m_anCcHisto_b[i];
-//             }
-//
-//             nHistoPeakVal = (nHistoCurVal > nHistoPeakVal) ? nHistoCurVal : nHistoPeakVal;
-//         }
-//     }
-//
-//     for (int32_t nHistChan = 0; nHistChan < 3; nHistChan++) {
-//         if (nHistChan == CHAN_R) {
-//             rgbHistOffset = HISTO_BIN_HEIGHT_MAX - 1;
-//         } else if (nHistChan == CHAN_G) {
-//             rgbHistOffset = HISTO_BIN_HEIGHT_MAX * 2 - 1;
-//         } else {
-//             rgbHistOffset = HISTO_BIN_HEIGHT_MAX * 3 - 1;
-//         }
-//
-//         for (int32_t i = 0; i < HISTO_BINS; i++) {
-//             // Calculate bin's height (max HISTO_BIN_HEIGHT_MAX)
-//             if (nHistChan == CHAN_R) {
-//                 nHistoCurVal = m_anCcHisto_r[i];
-//             } else if (nHistChan == CHAN_G) {
-//                 nHistoCurVal = m_anCcHisto_g[i];
-//             } else {
-//                 nHistoCurVal = m_anCcHisto_b[i];
-//             }
-//
-//             nHistoBinHeight = HISTO_BIN_HEIGHT_MAX * nHistoCurVal / nHistoPeakVal;
-//
-//             for (int32_t y = 0; y < nHistoBinHeight; y++) {
-//                 // Store the RGB triplet
-//                 for (int32_t bin_width = 0; bin_width < HISTO_BIN_WIDTH; bin_width++) {
-//                     nHistoX = (i * HISTO_BIN_WIDTH) + bin_width;
-//                     //            nCoordY = ((2 - nHistChan) * HISTO_BIN_HEIGHT_MAX) + y;
-//                     nCoordY = (rgbHistOffset - y) - 1;
-//                     m_pDibHistRgb->setPixelColor(nHistoX,
-//                                                  nCoordY,
-//                                                  QColor((nHistChan == CHAN_R) ? 255 : 0,
-//                                                         (nHistChan == CHAN_G) ? 255 : 0,
-//                                                         (nHistChan == CHAN_B) ? 255 : 0));
-//                 }
-//             }
-//         }  // i: 0..HISTO_BINS-1
-//
-//         m_bDibHistRgbReady = true;
-//     }
-//
-//     // Only create the Y DC Histogram if requested
-//     m_bDibHistYReady = false;
-//
-//     if (bDumpHistoY) {
-//         m_pDibHistY = new QImage(SUBSET_HISTO_BINS * HISTO_BIN_WIDTH, HISTO_BIN_HEIGHT_MAX, QImage::Format_RGB32);
-//         m_pDibHistY->fill(Qt::white);
-//
-//         // Do peak detect first
-//         // Don't want to reset peak value to 0 as otherwise we might get
-//         // division by zero later when we calculate nHistoBinHeight
-//         nHistoPeakVal = 1;
-//
-//         // TODO: Temporarily made quarter width - need to resample instead
-//
-//         // Peak value
-//         for (uint32_t i = 0; i < SUBSET_HISTO_BINS; i++) {
-//             nHistoCurVal = m_anHistoYFull[i * 4 + 0];
-//             nHistoCurVal += m_anHistoYFull[i * 4 + 1];
-//             nHistoCurVal += m_anHistoYFull[i * 4 + 2];
-//             nHistoCurVal += m_anHistoYFull[i * 4 + 3];
-//             nHistoPeakVal = (nHistoCurVal > nHistoPeakVal) ? nHistoCurVal : nHistoPeakVal;
-//         }
-//
-//         for (int32_t i = 0; i < SUBSET_HISTO_BINS; i++) {
-//             // Calculate bin's height (max HISTO_BIN_HEIGHT_MAX)
-//             nHistoCurVal = m_anHistoYFull[i * 4 + 0];
-//             nHistoCurVal += m_anHistoYFull[i * 4 + 1];
-//             nHistoCurVal += m_anHistoYFull[i * 4 + 2];
-//             nHistoCurVal += m_anHistoYFull[i * 4 + 3];
-//             nHistoBinHeight = HISTO_BIN_HEIGHT_MAX * nHistoCurVal / nHistoPeakVal;
-//
-//             for (int32_t y = 0; y < nHistoBinHeight; y++) {
-//                 // Store the RGB triplet
-//                 for (int32_t bin_width = 0; bin_width < HISTO_BIN_WIDTH; bin_width++) {
-//                     nHistoX = (i * HISTO_BIN_WIDTH) + bin_width;
-//                     nCoordY = (HISTO_BIN_HEIGHT_MAX - y) - 1;
-//                     m_pDibHistY->setPixelColor(nHistoX, nCoordY, Qt::gray);
-//                 }
-//             }
-//         }  // i: 0..HISTO_BINS-1
-//
-//         m_bDibHistYReady = true;
-//     }
-// }
 
 // Reset the decoder Scan Buff (at start of scan and
 // after any restart markers)
@@ -4431,40 +4099,6 @@ void ImgDecode::ConvertYCCtoRGB(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
 
     double nValR, nValG, nValB;
 
-    if (_histogramEnabled) {
-        // Calc stats on preranged YCC (direct from huffman DC sums)
-        m_sHisto.nPreclipYMin = (sPix.nPrerangeY < m_sHisto.nPreclipYMin) ? sPix.nPrerangeY : m_sHisto.nPreclipYMin;
-        m_sHisto.nPreclipYMax = (sPix.nPrerangeY > m_sHisto.nPreclipYMax) ? sPix.nPrerangeY : m_sHisto.nPreclipYMax;
-        m_sHisto.nPreclipYSum += sPix.nPrerangeY;
-        m_sHisto.nPreclipCbMin = (sPix.nPrerangeCb < m_sHisto.nPreclipCbMin) ? sPix.nPrerangeCb
-                                                                             : m_sHisto.nPreclipCbMin;
-        m_sHisto.nPreclipCbMax = (sPix.nPrerangeCb > m_sHisto.nPreclipCbMax) ? sPix.nPrerangeCb
-                                                                             : m_sHisto.nPreclipCbMax;
-        m_sHisto.nPreclipCbSum += sPix.nPrerangeCb;
-        m_sHisto.nPreclipCrMin = (sPix.nPrerangeCr < m_sHisto.nPreclipCrMin) ? sPix.nPrerangeCr
-                                                                             : m_sHisto.nPreclipCrMin;
-        m_sHisto.nPreclipCrMax = (sPix.nPrerangeCr > m_sHisto.nPreclipCrMax) ? sPix.nPrerangeCr
-                                                                             : m_sHisto.nPreclipCrMax;
-        m_sHisto.nPreclipCrSum += sPix.nPrerangeCr;
-    }
-
-    if (_histogramEnabled) {
-        // Now generate the Y histogram, if requested
-        // Add the Y value to the full histogram (for image similarity calcs)
-        //if (bDumpHistoY) {
-        int32_t histo_index = sPix.nPrerangeY;
-
-        if (histo_index < -1024)
-            histo_index = -1024;
-
-        if (histo_index > 1023)
-            histo_index = 1023;
-
-        histo_index += 1024;
-        m_anHistoYFull[histo_index]++;
-        //}
-    }
-
     // Perform ranging to adjust from Huffman sums to reasonable range
     // -1024..+1024 -> 0..255
     // Add 1024 then / 8
@@ -4512,18 +4146,6 @@ void ImgDecode::ConvertYCCtoRGB(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
      nMcuX,nMcuY,y,cb,cr,r_limb,g_limb,b_limb);
      m_pLog->AddLine(strTmp);
    */
-
-    if (_histogramEnabled) {
-        // Bin the result into a histogram!
-        //   value = 0..255
-        //   bin   = 0..7, 8..15, ..., 248..255
-        // Channel: Red
-        uint32_t bin_divider = 256 / HISTO_BINS;
-
-        m_anCcHisto_r[sPix.nFinalR / bin_divider]++;
-        m_anCcHisto_g[sPix.nFinalG / bin_divider]++;
-        m_anCcHisto_b[sPix.nFinalB / bin_divider]++;
-    }
 }
 
 // Color conversion clipping
@@ -4548,19 +4170,6 @@ void ImgDecode::CapYccRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
     nCurY = sPix.nPreclipY;
     nCurCb = sPix.nPreclipCb;
     nCurCr = sPix.nPreclipCr;
-
-    if (_histogramEnabled) {
-        m_sHisto.nClipYMin = (nCurY < m_sHisto.nClipYMin) ? nCurY : m_sHisto.nClipYMin;
-        m_sHisto.nClipYMax = (nCurY > m_sHisto.nClipYMax) ? nCurY : m_sHisto.nClipYMax;
-        m_sHisto.nClipYSum += nCurY;
-        m_sHisto.nClipCbMin = (nCurCb < m_sHisto.nClipCbMin) ? nCurCb : m_sHisto.nClipCbMin;
-        m_sHisto.nClipCbMax = (nCurCb > m_sHisto.nClipCbMax) ? nCurCb : m_sHisto.nClipCbMax;
-        m_sHisto.nClipCbSum += nCurCb;
-        m_sHisto.nClipCrMin = (nCurCr < m_sHisto.nClipCrMin) ? nCurCr : m_sHisto.nClipCrMin;
-        m_sHisto.nClipCrMax = (nCurCr > m_sHisto.nClipCrMax) ? nCurCr : m_sHisto.nClipCrMax;
-        m_sHisto.nClipCrSum += nCurCr;
-        m_sHisto.nCount++;
-    }
 
     if (CC_CLIP_YCC_EN) {
         if (nCurY > CC_CLIP_YCC_MAX) {
@@ -4745,18 +4354,6 @@ void ImgDecode::CapRgbRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
     nLimitG = static_cast<int32_t>(sPix.nPreclipG);
     nLimitB = static_cast<int32_t>(sPix.nPreclipB);
 
-    if (_histogramEnabled) {
-        m_sHisto.nPreclipRMin = (nLimitR < m_sHisto.nPreclipRMin) ? nLimitR : m_sHisto.nPreclipRMin;
-        m_sHisto.nPreclipRMax = (nLimitR > m_sHisto.nPreclipRMax) ? nLimitR : m_sHisto.nPreclipRMax;
-        m_sHisto.nPreclipRSum += nLimitR;
-        m_sHisto.nPreclipGMin = (nLimitG < m_sHisto.nPreclipGMin) ? nLimitG : m_sHisto.nPreclipGMin;
-        m_sHisto.nPreclipGMax = (nLimitG > m_sHisto.nPreclipGMax) ? nLimitG : m_sHisto.nPreclipGMax;
-        m_sHisto.nPreclipGSum += nLimitG;
-        m_sHisto.nPreclipBMin = (nLimitB < m_sHisto.nPreclipBMin) ? nLimitB : m_sHisto.nPreclipBMin;
-        m_sHisto.nPreclipBMax = (nLimitB > m_sHisto.nPreclipBMax) ? nLimitB : m_sHisto.nPreclipBMax;
-        m_sHisto.nPreclipBSum += nLimitB;
-    }
-
     if (nLimitR < 0) {
         if (_verbose) {
             QString strTmp;
@@ -4863,18 +4460,6 @@ void ImgDecode::CapRgbRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc &sPix) {
         sPix.nClip |= CC_CLIP_B_OVER;
         m_sStatClip.nClipBOver++;
         nLimitB = 255;
-    }
-
-    if (_histogramEnabled) {
-        m_sHisto.nClipRMin = (nLimitR < m_sHisto.nClipRMin) ? nLimitR : m_sHisto.nClipRMin;
-        m_sHisto.nClipRMax = (nLimitR > m_sHisto.nClipRMax) ? nLimitR : m_sHisto.nClipRMax;
-        m_sHisto.nClipRSum += nLimitR;
-        m_sHisto.nClipGMin = (nLimitG < m_sHisto.nClipGMin) ? nLimitG : m_sHisto.nClipGMin;
-        m_sHisto.nClipGMax = (nLimitG > m_sHisto.nClipGMax) ? nLimitG : m_sHisto.nClipGMax;
-        m_sHisto.nClipGSum += nLimitG;
-        m_sHisto.nClipBMin = (nLimitB < m_sHisto.nClipBMin) ? nLimitB : m_sHisto.nClipBMin;
-        m_sHisto.nClipBMax = (nLimitB > m_sHisto.nClipBMax) ? nLimitB : m_sHisto.nClipBMax;
-        m_sHisto.nClipBSum += nLimitB;
     }
 
     // Now convert to byteui
@@ -5029,7 +4614,7 @@ void ImgDecode::CalcChannelPreviewFull(QRect *, uint8_t *pTmp) {
             }
 
             // Invoke the appropriate color conversion routine
-            if (_histogramEnabled || _statClipEnabled) {
+            if (_statClipEnabled) {
                 ConvertYCCtoRGB(nMcuX, nMcuY, sPixSrc);
             } else {
                 ConvertYCCtoRGBFastFloat(sPixSrc);

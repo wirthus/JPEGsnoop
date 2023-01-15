@@ -23,11 +23,9 @@ SnoopConfig::SnoopConfig(QObject *parent) : QObject(parent) {
     _outputScanDump = false;      // Print snippet of scan data
     _outputDhtExpand = false;     // Print expanded huffman tables
     _decodeMaker = true;
-    _dumpHistogramY = false;
 
     // Difference in performance: 1dsmk2 image:
     // Performance boost ~ 25%
-    _histogramEnabled = false;    // Histogram & clipping stats enabled?
     _statClipEnabled = false;     // UNUSED: Enable Scan Decode clip stats?
 
     _exifHideUnknown = true;      // Default to hiding unknown EXIF tags

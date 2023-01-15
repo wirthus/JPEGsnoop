@@ -299,14 +299,9 @@ public:
 
     void decodeScanImg(uint32_t startPosition, bool display, bool quiet);
 
-    // void DrawHistogram(bool bQuiet, bool bDumpHistoY);
-    void reportHistogramY();
     void reportColorStats();
 
     bool isImgDecoded() const;
-    bool isYHistogramReady() const;
-
-    bool isRgbHistogramReady() const;
 
     bool isPreviewReady() const;
     void setPreviewReady(bool ready);
@@ -390,12 +385,7 @@ public:
     void setStatusFilePosText(const QString &text);
     const QString &getStatusFilePosText() const;
 
-    QImage *yHistogram() const { return m_pDibHistY; }
-
-    QImage *rgbHistogram() const { return m_pDibHistRgb; }
-
     void reportDctMatrix();
-    void reportDctYccMatrix();
     void reportVlc(uint32_t nVlcPos, uint32_t nVlcAlign, uint32_t nZrl, int32_t nVal, uint32_t nCoeffStart, uint32_t nCoeffEnd, const QString &specialStr);
     void printDcCumVal(uint32_t nMcuX, uint32_t nMcuY, int32_t nVal);
     void reportDcRun(uint32_t nMcuX, uint32_t nMcuY, uint32_t nMcuLen);
@@ -661,7 +651,6 @@ private:
     uint32_t m_nScanBitsUsed2;
 
     // Image Analysis, histograms
-    bool _histogramEnabled;               // Histograms enabled? (by AppConfig)
     bool _statClipEnabled;           // UNUSED: Enable scan clipping stats?
     uint32_t m_nNumPixels;
     PixelCcHisto m_sHisto;        // YCC/RGB histogram (min/max/avg)
