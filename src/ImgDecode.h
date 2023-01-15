@@ -325,19 +325,6 @@ public:
     bool SetDhtSize(uint32_t nDestId, uint32_t nClass, uint32_t nSize);
     void SetPrecision(uint32_t nPrecision);
 
-    // Modes -- accessed from Doc
-    //  void SetPreviewMode(uint32_t nMode);
-    uint32_t GetPreviewMode();
-    void SetPreviewYccOffset(uint32_t nMcuX, uint32_t nMcuY, int32_t nY, int32_t nCb, int32_t nCr);
-    void GetPreviewYccOffset(uint32_t &nMcuX, uint32_t &nMcuY, int32_t &nY, int32_t &nCb, int32_t &nCr);
-    void SetPreviewMcuInsert(uint32_t nMcuX, uint32_t nMcuY, int32_t nLen);
-    void GetPreviewMcuInsert(uint32_t &nMcuX, uint32_t &nMcuY, uint32_t &nLen);
-    void SetPreviewZoom(bool bInc, bool bDec, bool bSet, uint32_t nVal);
-    uint32_t GetPreviewZoomMode();
-    double GetPreviewZoom();
-    bool GetPreviewOverlayMcuGrid();
-    void SetPreviewOverlayMcuGridToggle();
-
     // Utilities
     void LookupFilePosPix(QPoint p, uint32_t &nByte, uint32_t &nBit);
     void LookupFilePosMcu(QPoint p, uint32_t &nByte, uint32_t &nBit);
@@ -451,12 +438,7 @@ private:
     void DecodeIdctCalcFloat(uint32_t nCoefMax);
     void DecodeIdctCalcFixedpt();
     void ClrFullRes(int32_t nWidth, int32_t nHeight);
-    void
-    SetFullRes(int32_t nMcuX, int32_t nMcuY, int32_t nComp, uint32_t nCssXInd, uint32_t nCssYInd, int16_t nDcOffset);
-
-    void ChannelExtract(uint32_t nMode, PixelCc &sSrc, PixelCc &sDst);
-    void CalcChannelPreviewFull(QRect *pRectView, uint8_t *pTmp);
-    void CalcChannelPreview();
+    void SetFullRes(int32_t nMcuX, int32_t nMcuY, int32_t nComp, uint32_t nCssXInd, uint32_t nCssYInd, int16_t nDcOffset);
 
     // -------------------------------------------------------------
     // Member variables
@@ -563,7 +545,6 @@ private:
     bool m_bRestartEn;            // Did decoder see DRI?
     int32_t m_nRestartInterval;  // ... if so, what is the MCU interval
     int32_t m_nRestartRead;      // Number RST read during m_nScanBuff
-    int32_t m_nPreviewMode;       // Preview mode
 
     // Test shifting of YCC for ChannelPreview()
     int32_t m_nPreviewShiftY;
