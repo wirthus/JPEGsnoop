@@ -297,7 +297,7 @@ public:
     void reset();                 // Called during start of SOS decode
     void resetState();            // Called at start of new JFIF Decode
 
-    void decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet);
+    void decodeScanImg(uint32_t startPosition, bool display, bool quiet);
 
     // void DrawHistogram(bool bQuiet, bool bDumpHistoY);
     void reportHistogramY();
@@ -536,7 +536,7 @@ private:
     int16_t m_anDcChrCrCss[MAX_SAMP_FACT_V * MAX_SAMP_FACT_H];
 
     bool m_bScanBad;              // Any errors found?
-    uint32_t m_nScanErrMax;       // Max # scan decode errors shown
+    uint32_t _scanErrMax;       // Max # scan decode errors shown
 
     bool m_bDibHistRgbReady;
     QImage *m_pDibHistRgb;
@@ -586,7 +586,7 @@ private:
     uint32_t m_nPreviewInsMcuY;
     uint32_t m_nPreviewInsMcuLen;
 
-    bool m_bDecodeScanAc;       // User request decode of AC components?
+    bool _decodeScanAc;       // User request decode of AC components?
 
     // Brightest pixel detection
     int32_t m_nBrightY;

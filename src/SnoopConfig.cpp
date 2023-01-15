@@ -16,8 +16,8 @@ SnoopConfig::SnoopConfig(QObject *parent) : QObject(parent) {
     // --------------------------------
     // Registry settings
     _dbDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    _decodeScanImg = true;
-    _decodeScanImgAc = true;     // Coach message will be shown just in case
+    _decodeScanImg = false;
+    _decodeScanImgAc = false;     // Coach message will be shown just in case
     _sigSearch = false;
 
     _outputScanDump = false;      // Print snippet of scan data

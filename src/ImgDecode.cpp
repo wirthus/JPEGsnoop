@@ -99,7 +99,7 @@ ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject
     m_nPreviewMode = PREVIEW_RGB;
     SetPreviewZoom(false, false, true, PRV_ZOOM_12);
 
-    m_bDecodeScanAc = true;
+    _decodeScanAc = true;
 
     m_bViewOverlaysMcuGrid = false;
 
@@ -311,7 +311,7 @@ void ImgDecode::resetState() {
 //          break;
 //      }
 
-//      if(m_bDecodeScanAc)
+//      if(_decodeScanAc)
 //      {
 //        m_strTitle += ", DC+AC)";
 //      }
@@ -1070,13 +1070,13 @@ inline void ImgDecode::ScanBuffAddErr(uint32_t nNewByte, uint32_t nPtr, uint32_t
 // Disable any further reporting of scan errors
 //
 // PRE:
-// - m_nScanErrMax
+// - _scanErrMax
 // POST:
 // - m_nWarnBadScanNum
 // - m_bScanErrorsDisable
 //
 void ImgDecode::ScanErrorsDisable() {
-    m_nWarnBadScanNum = m_nScanErrMax;
+    m_nWarnBadScanNum = _scanErrMax;
     m_bScanErrorsDisable = true;
 }
 
@@ -1104,7 +1104,7 @@ void ImgDecode::ScanErrorsEnable() {
 // - Assume that dht_lookup_size[nTbl] != 0 (already checked)
 // - m_bRestartRead
 // - m_nScanBuff_vacant
-// - m_nScanErrMax
+// - _scanErrMax
 // - m_nScanBuff
 // - m_anDhtLookupFast[][][]
 // - m_anDhtLookupSize[][]
@@ -1159,7 +1159,7 @@ teRsvRet ImgDecode::ReadScanVal(uint32_t nClass, uint32_t nTbl, uint32_t &rZrl, 
     if (m_nScanBuff_vacant >= 32) {
         // Trying to overread end of scan segment
 
-        if (m_nWarnBadScanNum < m_nScanErrMax) {
+        if (m_nWarnBadScanNum < _scanErrMax) {
             QString strTmp;
 
             strTmp = QString("*** ERROR: Overread scan segment (before nCode)! @ Offset: %1").arg(getScanBufPos());
@@ -1167,8 +1167,8 @@ teRsvRet ImgDecode::ReadScanVal(uint32_t nClass, uint32_t nTbl, uint32_t &rZrl, 
 
             m_nWarnBadScanNum++;
 
-            if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+            if (m_nWarnBadScanNum >= _scanErrMax) {
+                strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                 _log.error(strTmp);
             }
         }
@@ -1335,7 +1335,7 @@ teRsvRet ImgDecode::ReadScanVal(uint32_t nClass, uint32_t nTbl, uint32_t &rZrl, 
         // reason, then indicate to caller that they need to call ReadScanVal
         // again.
 
-        if (m_nWarnBadScanNum < m_nScanErrMax) {
+        if (m_nWarnBadScanNum < _scanErrMax) {
             QString strTmp;
 
             strTmp =
@@ -1346,8 +1346,8 @@ teRsvRet ImgDecode::ReadScanVal(uint32_t nClass, uint32_t nTbl, uint32_t &rZrl, 
 
             m_nWarnBadScanNum++;
 
-            if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+            if (m_nWarnBadScanNum >= _scanErrMax) {
+                strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                 _log.error(strTmp);
             }
         }
@@ -1571,15 +1571,15 @@ uint32_t ImgDecode::BuffAddByte() {
         // Probably OK.
 
         /*
-       if (m_nWarnBadScanNum < m_nScanErrMax) {
+       if (m_nWarnBadScanNum < _scanErrMax) {
        QString strTmp;
        strTmp = QString("  Scan Data encountered sequence 0xFFFF @ 0x%08X.0 - Assume start of marker pad at end of scan segment",
        m_nScanBuffPtr);
        m_pLog->AddLineWarn(strTmp);
 
        m_nWarnBadScanNum++;
-       if (m_nWarnBadScanNum >= m_nScanErrMax) {
-       strTmp = QString("    Only reported first %u instances of this message..."),m_nScanErrMax;
+       if (m_nWarnBadScanNum >= _scanErrMax) {
+       strTmp = QString("    Only reported first %u instances of this message..."),_scanErrMax;
        m_pLog->AddLineErr(strTmp);
        }
        }
@@ -1603,7 +1603,7 @@ uint32_t ImgDecode::BuffAddByte() {
         // assume this marker is valid (ie. not bit error in scan stream)
         // and mark the end of the scan segment.
 
-        if (m_nWarnBadScanNum < m_nScanErrMax) {
+        if (m_nWarnBadScanNum < _scanErrMax) {
             QString strTmp;
 
             strTmp = QString("  Scan Data encountered marker   0xFF%1 @ 0x%2.0")
@@ -1617,8 +1617,8 @@ uint32_t ImgDecode::BuffAddByte() {
 
             m_nWarnBadScanNum++;
 
-            if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+            if (m_nWarnBadScanNum >= _scanErrMax) {
+                strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                 _log.error(strTmp);
             }
         }
@@ -1757,7 +1757,7 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
 
             m_bScanBad = true;
 
-            if (m_nWarnBadScanNum < m_nScanErrMax) {
+            if (m_nWarnBadScanNum < _scanErrMax) {
                 QString strPos = getScanBufPos(nSavedBufPos, nSavedBufAlign);
 
                 QString strTmp;
@@ -1767,8 +1767,8 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
 
                 m_nWarnBadScanNum++;
 
-                if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+                if (m_nWarnBadScanNum >= _scanErrMax) {
+                    strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                     _log.error(strTmp);
                 }
             }
@@ -1792,7 +1792,7 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
                 // Set entry in table
                 // PERFORMANCE:
                 //   No noticeable difference if following is skipped
-                if (m_bDecodeScanAc) {
+                if (_decodeScanAc) {
                     DecodeIdctSet(nTblDqt, nNumCoeffs, nZrl, nVal2);
                 }
             }
@@ -1808,7 +1808,7 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
         } else if (eRsvRet == RSV_UNDERFLOW) {
             // ERROR
 
-            if (m_nWarnBadScanNum < m_nScanErrMax) {
+            if (m_nWarnBadScanNum < _scanErrMax) {
                 QString strPos = getScanBufPos(nSavedBufPos, nSavedBufAlign);
 
                 QString strTmp;
@@ -1818,8 +1818,8 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
 
                 m_nWarnBadScanNum++;
 
-                if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+                if (m_nWarnBadScanNum >= _scanErrMax) {
+                    strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                     _log.error(strTmp);
                 }
             }
@@ -1850,7 +1850,7 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
         } else if (nNumCoeffs > 64) {
             // ERROR
 
-            if (m_nWarnBadScanNum < m_nScanErrMax) {
+            if (m_nWarnBadScanNum < _scanErrMax) {
                 QString strTmp;
 
                 QString strPos = getScanBufPos(nSavedBufPos, nSavedBufAlign);
@@ -1860,8 +1860,8 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
 
                 m_nWarnBadScanNum++;
 
-                if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+                if (m_nWarnBadScanNum >= _scanErrMax) {
+                    strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                     _log.error(strTmp);
                 }
             }
@@ -1885,12 +1885,12 @@ bool ImgDecode::DecodeScanComp(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint32_t 
     // PERFORMANCE:
     //   Example file: canon_1dsmk2_
     //
-    //   0:06       Turn off m_bDecodeScanAc (so no array memset, etc.)
-    //   0:10   m_bDecodeScanAc=true, but DecodeIdctCalc() skipped
-    //   0:26       m_bDecodeScanAc=true and DecodeIdctCalcFixedpt()
-    //   0:27       m_bDecodeScanAc=true and DecodeIdctCalcFloat()
+    //   0:06       Turn off _decodeScanAc (so no array memset, etc.)
+    //   0:10   _decodeScanAc=true, but DecodeIdctCalc() skipped
+    //   0:26       _decodeScanAc=true and DecodeIdctCalcFixedpt()
+    //   0:27       _decodeScanAc=true and DecodeIdctCalcFloat()
 
-    if (m_bDecodeScanAc) {
+    if (_decodeScanAc) {
 #ifdef IDCT_FIXEDPT
         DecodeIdctCalcFixedpt();
 #else
@@ -2038,15 +2038,15 @@ bool ImgDecode::DecodeScanCompPrint(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint
 
             m_bScanBad = true;
 
-            if (m_nWarnBadScanNum < m_nScanErrMax) {
+            if (m_nWarnBadScanNum < _scanErrMax) {
                 strPos = getScanBufPos(nSavedBufPos, nSavedBufAlign);
                 strTmp = QString("*** ERROR: Bad marker @ %1").arg(strPos);
                 _log.error(strTmp);
 
                 m_nWarnBadScanNum++;
 
-                if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+                if (m_nWarnBadScanNum >= _scanErrMax) {
+                    strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                     _log.error(strTmp);
                 }
             }
@@ -2085,7 +2085,7 @@ bool ImgDecode::DecodeScanCompPrint(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint
             }
             strSpecial = "EOB";
         } else if (eRsvRet == RSV_UNDERFLOW) {
-            if (m_nWarnBadScanNum < m_nScanErrMax) {
+            if (m_nWarnBadScanNum < _scanErrMax) {
                 strSpecial = "ERROR";
                 strPos = getScanBufPos(nSavedBufPos, nSavedBufAlign);
 
@@ -2094,8 +2094,8 @@ bool ImgDecode::DecodeScanCompPrint(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint
 
                 m_nWarnBadScanNum++;
 
-                if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+                if (m_nWarnBadScanNum >= _scanErrMax) {
+                    strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                     _log.error(strTmp);
                 }
             }
@@ -2123,15 +2123,15 @@ bool ImgDecode::DecodeScanCompPrint(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint
         } else if (nNumCoeffs > 64) {
             // ERROR
 
-            if (m_nWarnBadScanNum < m_nScanErrMax) {
+            if (m_nWarnBadScanNum < _scanErrMax) {
                 strPos = getScanBufPos(nSavedBufPos, nSavedBufAlign);
                 strTmp = QString("*** ERROR: @ %1, nNumCoeffs>64 [%2]").arg(strPos).arg(nNumCoeffs);
                 _log.error(strTmp);
 
                 m_nWarnBadScanNum++;
 
-                if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                    strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+                if (m_nWarnBadScanNum >= _scanErrMax) {
+                    strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                     _log.error(strTmp);
                 }
             }
@@ -2724,7 +2724,7 @@ void ImgDecode::CheckScanErrors(uint32_t nMcuX, uint32_t nMcuY, uint32_t nCssInd
                 break;
         }
 
-        if (m_nWarnBadScanNum < m_nScanErrMax) {
+        if (m_nWarnBadScanNum < _scanErrMax) {
             errStr = QString("*** ERROR: Bad scan data in MCU(%1,%2): %3 @ Offset %4")
                 .arg(nMcuX)
                 .arg(nMcuY)
@@ -2741,8 +2741,8 @@ void ImgDecode::CheckScanErrors(uint32_t nMcuX, uint32_t nMcuY, uint32_t nCssInd
 
             m_nWarnBadScanNum++;
 
-            if (m_nWarnBadScanNum >= m_nScanErrMax) {
-                strTmp = QString("    Only reported first %1 instances of this message...").arg(m_nScanErrMax);
+            if (m_nWarnBadScanNum >= _scanErrMax) {
+                strTmp = QString("    Only reported first %1 instances of this message...").arg(_scanErrMax);
                 _log.error(strTmp);
             }
         }
@@ -2808,11 +2808,11 @@ void ImgDecode::setImageDimensions(uint32_t nWidth, uint32_t nHeight) {
 // - Call SetFullRes() to transfer IDCT output to YCC Pixel Map
 //
 // INPUT:
-// - nStart                                     = File position at start of scan
-// - bDisplay                           = Generate a preview image?
-// - bQuiet                                     = Disable output of certain messages during decode?
+// - startPosition                             = File position at start of scan
+// - display                                   = Generate a preview image?
+// - quiet                                     = Disable output of certain messages during decode?
 //
-void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet) {
+void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) {
     _log.debug("ImgDecode::decodeScanImg Start");
 
     QString strTmp;
@@ -2821,15 +2821,13 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
 
     // Fetch configuration values locally
     bool bDumpHistoY = _appConfig.displayYHistogram();
-    bool bDecodeScanAc;
-
-    int32_t nScanErrMax = _appConfig.maxDecodeError();
+    bool decodeScanAc;
 
     // Add some extra speed-up in hidden mode (we don't need AC)
-    if (bDisplay) {
-        bDecodeScanAc = _appConfig.decodeAc();
+    if (display) {
+        decodeScanAc = _appConfig.decodeAc();
     } else {
-        bDecodeScanAc = false;
+        decodeScanAc = false;
     }
 
     _histogramEnabled = _appConfig.displayRgbHistogram();
@@ -2841,8 +2839,8 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
     // Reset the decoder state variables
     reset();
 
-    m_nScanErrMax = nScanErrMax;
-    m_bDecodeScanAc = bDecodeScanAc;
+    _scanErrMax = _appConfig.maxDecodeError();
+    _decodeScanAc = decodeScanAc;
 
     // Detect the scenario where the image component details haven't been set yet
     // The image details are set via SetImageDetails()
@@ -3082,7 +3080,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
     }
 
     // Reset pixel map
-    if (bDisplay) {
+    if (display) {
         ClrFullRes(nPixMapW, nPixMapH);
     }
 
@@ -3110,7 +3108,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
     // have access to the data.
     BuffTopup();
 
-    if (!bQuiet) {
+    if (!quiet) {
         _log.info("*** Decoding SCAN Data ***");
         strTmp = QString("  OFFSET: 0x%1").arg(startPosition, 8, 16, QChar('0'));
         _log.info(strTmp);
@@ -3225,8 +3223,8 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
     // Done checks
 
     // Inform if they are in AC+DC/DC mode
-    if (!bQuiet) {
-        if (m_bDecodeScanAc) {
+    if (!quiet) {
+        if (_decodeScanAc) {
             _log.info("  Scan Decode Mode: Full IDCT (AC + DC)");
         } else {
             _log.info("  Scan Decode Mode: No IDCT (DC only)");
@@ -3241,7 +3239,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
     m_nNumPixels = 0;
 
     // Clear the histogram and color correction clipping stats
-    if (bDisplay) {
+    if (display) {
         memset(&m_sStatClip, 0, sizeof(m_sStatClip));
         memset(&m_sHisto, 0, sizeof(m_sHisto));
 
@@ -3314,9 +3312,9 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
             // To support a fast decode mode, allow for a subset of the
             // image to have DC+AC decoding, while the remainder is only DC decoding
             if ((nMcuY < nDecMcuRowStart) || (nMcuY > nDecMcuRowEnd)) {
-                m_bDecodeScanAc = false;
+                _decodeScanAc = false;
             } else {
-                m_bDecodeScanAc = bDecodeScanAc;
+                _decodeScanAc = decodeScanAc;
             }
 
             // Precalculate MCU matrix index
@@ -3401,7 +3399,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
                     // on the 8x8 (or larger) MCU block region.
 
 #if 1
-                    if (bDisplay) {
+                    if (display) {
                         SetFullRes(nMcuX, nMcuY, nComp, nCssIndH, nCssIndV, m_nDcLum);
                     }
 #else
@@ -3485,7 +3483,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
                         m_anDcChrCbCss[nCssIndV * MAX_SAMP_FACT_H + nCssIndH] = m_nDcChrCb;
 
                         // Store fullres value
-                        if (bDisplay) {
+                        if (display) {
                             SetFullRes(nMcuX, nMcuY, nComp, nCssIndH, nCssIndV, m_nDcChrCb);
                         }
                     }
@@ -3529,7 +3527,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
                         m_anDcChrCrCss[nCssIndV * MAX_SAMP_FACT_H + nCssIndH] = m_nDcChrCr;
 
                         // Store fullres value
-                        if (bDisplay) {
+                        if (display) {
                             SetFullRes(nMcuX, nMcuY, nComp, nCssIndH, nCssIndV, m_nDcChrCr);
                         }
                     }
@@ -3577,7 +3575,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
             m_anDcChrCbCss[nCssIndV * MAX_SAMP_FACT_H + nCssIndH] = m_nDcChrCb;
 
             // Store fullres value
-            if(bDisplay)
+            if(display)
             {
               SetFullRes(nMcuX, nMcuY, nComp, 0, 0, m_nDcChrCb);
             }
@@ -3618,7 +3616,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
             m_anDcChrCrCss[nCssIndV * MAX_SAMP_FACT_H + nCssIndH] = m_nDcChrCr;
 
             // Store fullres value
-            if(bDisplay)
+            if(display)
               SetFullRes(nMcuX, nMcuY, nComp, 0, 0, m_nDcChrCr);
           }
         }
@@ -3659,7 +3657,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
 						m_anDcChrKCss[nCssIndV*MAX_SAMP_FACT_H+nCssIndH] = m_nDcChrK;
 
 						// Store fullres value
-						if (bDisplay)
+						if (display)
 							SetFullRes(nMcuX,nMcuY,nComp,0,0,m_nDcChrK);
 */
 
@@ -3800,7 +3798,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
         }                           // nMcuX
     }                             // nMcuY
 
-    if (!bQuiet) {
+    if (!quiet) {
         _log.info("");
     }
 
@@ -3813,12 +3811,12 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
     // decoding a new image, we need to ensure that we invalidate
     // the temporary preview (multi-channel option). Done earlier
     // with PREVIEW_NONE
-    if (bDisplay) {
+    if (display) {
         CalcChannelPreview();
     }
 
     // DIB is ready for display now
-    if (bDisplay) {
+    if (display) {
         _dibTempReady = true;
         _isPreviewReady = true;
     }
@@ -3826,7 +3824,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
     // ------------------------------------
     // Report statistics
 
-    if (!bQuiet) {
+    if (!quiet) {
         // Report Compression stats
         // TODO: Should we use m_nNumSofComps?
         strTmp = QString("  Compression stats:");
@@ -3877,22 +3875,22 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
 
         // Report YCC stats
         reportColorStats();
-    }                             // !bQuiet
+    }                             // !quiet
 
     // ------------------------------------
 
     // Display the image histogram if enabled
-    if (bDisplay && _histogramEnabled) {
-        // DrawHistogram(bQuiet, bDumpHistoY);
+    if (display && _histogramEnabled) {
+        // DrawHistogram(quiet, bDumpHistoY);
     }
 
-    if (bDisplay && m_bAvgYValid) {
+    if (display && m_bAvgYValid) {
         _log.info("  Average Pixel Luminance (Y):");
         _log.info(QString("    Y=[%1] (range: 0..255)").arg(m_nAvgY, 3));
         _log.info("");
     }
 
-    if (bDisplay && m_bBrightValid) {
+    if (display && m_bBrightValid) {
         _log.info("  Brightest Pixel Search:");
         strTmp = QString("    YCC=[%1,%2,%3] RGB=[%4,%5,%6] @ MCU[%7,%8]")
             .arg(m_nBrightY, 5)
@@ -3909,7 +3907,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
 
     // --------------------------------------
 
-    if (!bQuiet) {
+    if (!quiet) {
         _log.info("  Finished Decoding SCAN Data");
         strTmp = QString("    Number of RESTART markers decoded: %1").arg(m_nRestartRead);
         _log.info(strTmp);
@@ -3923,7 +3921,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool bDisplay, bool bQuiet
 
     QString strFull;
 
-    if (bDisplay && _histogramEnabled && bDumpHistoY) {
+    if (display && _histogramEnabled && bDumpHistoY) {
         reportHistogramY();
     }
 }
@@ -5765,7 +5763,7 @@ void ImgDecode::SetPreviewZoom(bool bInc, bool bDec, bool bSet, uint32_t nVal) {
 //     //          break;
 //     //      }
 //
-//     //      if(m_bDecodeScanAc)
+//     //      if(_decodeScanAc)
 //     //      {
 //     //        m_strTitle += ", DC+AC)";
 //     //      }
