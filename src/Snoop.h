@@ -27,6 +27,8 @@
 #ifndef JPEGSNOOP_SNOOP_H
 #define JPEGSNOOP_SNOOP_H
 
+#include <QtGlobal>
+
 // Program Version / Release Number
 // - Format: "X.Y.Z"          - (full public release)
 // - Format: "X.Y.Z (beta W)" - (beta release)
