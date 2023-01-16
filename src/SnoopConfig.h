@@ -40,13 +40,9 @@ Q_OBJECT
 
 public:
     explicit SnoopConfig(QObject *parent = nullptr);
-    ~SnoopConfig() override;
-
-    const QString &dbPath() const { return _dbDir; }
+    ~SnoopConfig() override = default;
 
     int32_t maxDecodeError() const { return _errMaxDecodeScan; }
-
-    bool clipStats() const { return _statClipEnabled; }
 
     bool decodeAc() const { return _decodeScanImgAc; }
 
@@ -78,7 +74,6 @@ private:
     bool _outputScanDump;          // Do we dump a portion of scan data?
     bool _outputDhtExpand;
     bool _decodeMaker;
-    bool _statClipEnabled;         // Enable scan decode clip stats?
     bool _exifHideUnknown;         // Hide unknown exif tags?
     bool _relaxedParsing;          // Proceed despite bad marker / format?
 

@@ -64,9 +64,6 @@ JfifDecode::JfifDecode(ILog &log, WindowBuf &buf, ImgDecode &imgDec, SnoopConfig
 
     log.debug(QStringLiteral("JfifDecode::JfifDecode() Begin"));
 
-    // Need to zero out the private members
-    _outputDb = false;          // mySQL output for web
-
     // Enable verbose reporting
     _verbose = false;
 
@@ -139,9 +136,7 @@ void JfifDecode::reset() {
     // Misc
     _imgOk = false;             // Set during SOF to indicate further proc OK
     _bufFakeDht = false;        // Start in normal Buf mode
-    m_eImgEdited = EDITED_UNSET;
     m_eDbReqSuggest = DB_ADD_SUGGEST_UNSET;
-    m_bSigExactInDB = false;
 
     // Embedded thumbnail
     m_nImgExifThumbComp = 0;
@@ -200,7 +195,7 @@ void JfifDecode::setAviMode(bool isAvi, bool isMjpeg) {
 // - bIsAvi
 // - bIsMjpeg
 //
-void JfifDecode::getAviMode(bool &isAvi, bool &isMjpeg) {
+void JfifDecode::getAviMode(bool &isAvi, bool &isMjpeg) const {
     isAvi = _avi;
     isMjpeg = _aviMjpeg;
 }
@@ -263,9 +258,7 @@ bool JfifDecode::getDecodeStatus() const {
 // - strSoftware
 // - nDbReqSuggest
 //
-void
-JfifDecode::getDecodeSummary(QString &strHash, QString &strHashRot, QString &strImgExifMake, QString &strImgExifModel,
-                             QString &strImgQualExif, QString &strSoftware, teDbAdd &eDbReqSuggest) {
+void JfifDecode::getDecodeSummary(QString &strHash, QString &strHashRot, QString &strImgExifMake, QString &strImgExifModel, QString &strImgQualExif, QString &strSoftware, teDbAdd &eDbReqSuggest) {
     strHash = m_strHash;
     strHashRot = m_strHashRot;
     strImgExifMake = m_strImgExifMake;
@@ -288,19 +281,7 @@ uint32_t JfifDecode::getDqtQuantStd(uint32_t nInd) {
     if (nInd < MAX_DQT_COEFF) {
         return glb_anStdQuantLum[nInd];
     } else {
-#ifdef DEBUG_LOG
-        QString strTmp;
-
-        QString strDebug;
-
-        strTmp = QString("getDqtQuantStd() with nInd out of range. nInd=[%1]").arg(nInd);
-        strDebug = QString("## File=[%1] Block=[%2] Error=[%3]").arg(_appConfig.curFileName, -100).arg("JfifDecode",
-                                                                                                       -10).arg(
-            strTmp);
-        _log.debug(strDebug);
-#else
         Q_ASSERT(false);
-#endif
         return 0;
     }
 }
@@ -309,7 +290,7 @@ uint32_t JfifDecode::getDqtQuantStd(uint32_t nInd) {
 // Fetch the DQT ordering index (with optional zigzag sequence)
 //
 // INPUT:
-// - nInd                       Coefficient index
+// - nInd               Coefficient index
 // - bZigZag            Use zig-zag ordering
 //
 // RETURN:
@@ -323,18 +304,7 @@ uint32_t JfifDecode::getDqtZigZagIndex(uint32_t nInd, bool bZigZag) {
             return glb_anZigZag[nInd];
         }
     } else {
-#ifdef DEBUG_LOG
-        QString strTmp;
-        QString strDebug;
-
-        strTmp = QString("getDqtZigZagIndex() with nInd out of range. nInd=[%1]").arg(nInd);
-        strDebug = QString("## File=[%1] Block=[%2] Error=[%3]").arg(_appConfig.curFileName, -100).arg("JfifDecode",
-                                                                                                       -10).arg(
-            strTmp);
-        _log.debug(strDebug);
-#else
         Q_ASSERT(false);
-#endif
         return 0;
     }
 }
@@ -2781,7 +2751,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
                     // 2 unsigned shorts in 1 word
                     anValues[0] = readSwap2(_pos + 0);
                     anValues[1] = readSwap2(_pos + 2);
-                    strValOut = QString("%1, %1").arg(anValues[0]).arg(anValues[1]);
+                    strValOut = QString("%1, %2").arg(anValues[0]).arg(anValues[1]);
                     strFull += strValOut;
                     strFull += "]";
                     dbgAddLine(strFull);
@@ -3658,15 +3628,13 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
                 m_strImgQualExif = strValOut;
 
                 // Collect extra details (for later DB submission)
-                strTmp = "";
-                strTmp = QString("[%1]:[%1],").arg(strIfdTag).arg(strValOut);
+                strTmp = QString("[%1]:[%2],").arg(strIfdTag, strValOut);
                 m_strImgExtras += strTmp;
             }
 
             // Collect extra details (for later DB submission)
             if (strIfdTag == "Canon.ImageType") {
-                strTmp = "";
-                strTmp = QString("[%1]:[%1],").arg(strIfdTag).arg(strValOut);
+                strTmp = QString("[%1]:[%2],").arg(strIfdTag, strValOut);
                 m_strImgExtras += strTmp;
             }
         }
@@ -4774,8 +4742,7 @@ bool JfifDecode::expectMarkerEnd(uint32_t nMarkerStart, uint32_t nMarkerLen) {
 // OUTPUT:
 // - nVal                       Output value (including any override)
 //
-bool JfifDecode::validateValue(uint32_t &nVal, uint32_t nMin, uint32_t nMax, QString strName, bool bOverride,
-                               uint32_t nOverrideVal) {
+bool JfifDecode::validateValue(uint32_t &nVal, uint32_t nMin, uint32_t nMax, const QString& strName, bool bOverride, uint32_t nOverrideVal) {
     QString strErr;
 
     if ((nVal >= nMin) && (nVal <= nMax)) {
@@ -4783,13 +4750,9 @@ bool JfifDecode::validateValue(uint32_t &nVal, uint32_t nMin, uint32_t nMax, QSt
         return true;
     } else {
         if (nVal < nMin) {
-            strErr = QString("%1 value too small (Actual = %2, Expected >= %3)").arg(strName).arg(nVal).arg(
-                nMin);
-            _log.error(strErr);
+            _log.error(QString("%1 value too small (Actual = %2, Expected >= %3)").arg(strName).arg(nVal).arg(nMin));
         } else if (nVal > nMax) {
-            strErr = QString("%1 value too large (Actual = %2, Expected <= %3)").arg(strName).arg(nVal).arg(
-                nMax);
-            _log.error(strErr);
+            _log.error(QString("%1 value too large (Actual = %2, Expected <= %3)").arg(strName).arg(nVal).arg(nMax));
         }
 
         if (!_appConfig.relaxedParsing()) {
@@ -4854,20 +4817,6 @@ uint32_t JfifDecode::decodeMarker() {
     // QString strDqtZigZagOrder = "";
 
     if (getByte(_pos) != 0xFF) {
-        if (_pos == 0) {
-            // Don't give error message if we've already alerted them of AVI / PSD
-            if ((!_avi) && (!_psd)) {
-                _log.warn("File did not start with JPEG marker. Consider using [Tools->Img Search Fwd] to locate embedded JPEG.");
-            }
-        } else {
-            strTmp =
-                QString(
-                    "Expected marker 0xFF, got 0x%1 @ offset 0x%2. Consider using [Tools->Img Search Fwd/Rev].")
-                    .arg(getByte(_pos), 2, 16, QChar('0'))
-                    .arg(_pos, 8, 16, QChar('0'));
-            _log.error(strTmp);
-        }
-
         _pos++;
         return DECMARK_ERR;
     }
@@ -6391,15 +6340,9 @@ uint32_t JfifDecode::decodeMarker() {
                 // checking m_nPos against file length? .. and not
                 // return but "break".
                 if (!_wbuf.isBufferOk()) {
-                    strTmp = QString("Ran out of buffer before EOI during phase 1 of Scan decode @ 0x%1").arg(
-                        _pos,
-                        8,
-                        16,
-                        QChar('0'));
-                    _log.error(strTmp);
+                    _log.error(QString("Ran out of buffer before EOI during phase 1 of Scan decode @ 0x%1").arg(_pos, 8, 16, QChar('0')));
                     break;
                 }
-
             }
 
             _log.info(strFull);
@@ -6585,10 +6528,10 @@ uint32_t JfifDecode::decodeMarker() {
 }
 
 // Print out a header for the current JFIF marker code
-void JfifDecode::addHeader(uint32_t nCode) {
+void JfifDecode::addHeader(uint32_t code) {
     QString strTmp;
 
-    switch (nCode) {
+    switch (code) {
         case JFIF_SOI:
             _log.info("*** Marker: SOI (xFFD8) ***");
             break;
@@ -6813,7 +6756,7 @@ void JfifDecode::addHeader(uint32_t nCode) {
             break;
 
         default:
-            strTmp = QString("*** Marker: ??? (Unknown) (xFF%1) ***").arg(nCode, 2, 16, QChar('0'));
+            strTmp = QString("*** Marker: ??? (Unknown) (xFF%1) ***").arg(code, 2, 16, QChar('0'));
             _log.info(strTmp);
             break;
     }
@@ -6821,95 +6764,6 @@ void JfifDecode::addHeader(uint32_t nCode) {
     // Adjust position to account for the word used in decoding the marker!
     strTmp = QString("  OFFSET: 0x%1").arg(_pos - 2, 8, 16, QChar('0'));
     _log.info(strTmp);
-}
-
-void JfifDecode::setStatusText(const QString &msg) {
-    // emit(msg, 0);
-    // QCoreApplication::processEvents();
-}
-
-//-----------------------------------------------------------------------------
-// Generate a special output form of the current image's
-// compression signature and other characteristics. This is only
-// used during development and batch import to build the MySQL repository.
-void JfifDecode::outputSpecial() {
-    QString strTmp;
-    QString strFull;
-
-    Q_ASSERT(m_eImgLandscape != ENUM_LANDSCAPE_UNSET);
-
-    // This mode of operation is currently only used
-    // to import the local signature database into a MySQL database
-    // backend. It simply reports the MySQL commands which can be input
-    // into a MySQL client application.
-    if (_outputDb) {
-        _log.info("*** DB OUTPUT START ***");
-        _log.info("INSERT INTO `quant` (`key`, `make`, `model`, ");
-        _log.info("`qual`, `subsamp`, `lum_00`, `lum_01`, `lum_02`, `lum_03`, `lum_04`, ");
-        _log.info("`lum_05`, `lum_06`, `lum_07`, `chr_00`, `chr_01`, `chr_02`, ");
-        _log.info("`chr_03`, `chr_04`, `chr_05`, `chr_06`, `chr_07`, `qual_lum`, `qual_chr`) VALUES (");
-
-        strFull = "'*KEY*', ";      // key -- need to override
-
-        // Might need to change m_strImgExifMake to be lowercase
-        strTmp = QString("'%1', ").arg(m_strImgExifMake);
-        strFull += strTmp;          // make
-
-        strTmp = QString("'%1', ").arg(m_strImgExifModel);
-        strFull += strTmp;          // model
-
-        strTmp = QString("'%1', ").arg(m_strImgQualExif);
-        strFull += strTmp;          // quality
-
-        strTmp = QString("'%1', ").arg(m_strImgQuantCss);
-        strFull += strTmp;          // subsampling
-
-        _log.info(strFull);
-
-        // Step through both quantization tables (0=lum,1=chr)
-        uint32_t nMatrixInd;
-
-        for (uint32_t nDqtInd = 0; nDqtInd < 2; nDqtInd++) {
-
-            strFull = "";
-
-            for (uint32_t nY = 0; nY < 8; nY++) {
-                strFull += "'";
-
-                for (uint32_t nX = 0; nX < 8; nX++) {
-                    // Rotate the matrix if necessary!
-                    nMatrixInd = (m_eImgLandscape != ENUM_LANDSCAPE_NO) ? (nY * 8 + nX) : (nX * 8 + nY);
-                    strTmp = QString("%1").arg(m_anImgDqtTbl[nDqtInd][nMatrixInd]);
-                    strFull += strTmp;
-
-                    if (nX != 7) {
-                        strFull += ",";
-                    }
-                }
-
-                strFull += "', ";
-
-                if (nY == 3) {
-                    _log.info(strFull);
-                    strFull = "";
-                }
-            }
-
-            _log.info(strFull);
-        }
-
-        strFull = "";
-        // Output quality ratings
-        strTmp = QString("'%1', ").arg(m_adImgDqtQual[0]);
-        strFull += strTmp;
-        // Don't put out comma separator on last line!
-        strTmp = QString("'%1'").arg(m_adImgDqtQual[1]);
-        strFull += strTmp;
-        strFull += ");";
-        _log.info(strFull);
-
-        _log.info("*** DB OUTPUT END ***");
-    }
 }
 
 uint32_t JfifDecode::writeBuf(QFile &file, uint32_t startOffset, uint32_t endOffset, bool overlayEnabled) {
@@ -6940,282 +6794,6 @@ uint32_t JfifDecode::writeBuf(QFile &file, uint32_t startOffset, uint32_t endOff
     return size;
 }
 
-//-----------------------------------------------------------------------------
-// Generate the compression signatures (both unrotated and
-// rotated) in advance of submitting to the database.
-void JfifDecode::prepareSignature() {
-    // Set m_strHash
-    prepareSignatureSingle(false);
-    // Set m_strHashRot
-    prepareSignatureSingle(true);
-}
-
-// Prepare the image signature for later submission
-// NOTE: ASCII vars are used (instead of unicode) to support usage of MD5 library
-void JfifDecode::prepareSignatureSingle(bool bRotate) {
-    QString strTmp;
-    QString strSet;
-    QString strHashIn;
-
-    //  unsigned char pHashIn[2000];
-    unsigned char *pHashIn;
-
-    QString strDqt;
-
-    MD5_CTX sMd5;
-
-    int32_t nLenHashIn;
-    uint32_t nInd;
-
-    Q_ASSERT(m_eImgLandscape != ENUM_LANDSCAPE_UNSET);
-
-    pHashIn = new unsigned char[2000];
-    // -----------------------------------------------------------
-    // Calculate the MD5 hash for online/internal database!
-    // signature "00" : DQT0,DQT1,CSS
-    // signature "01" : salt,DQT0,DQT1,..DQTx(if defined)
-
-    // Build the source string
-    // NOTE: For the purposes of the hash, we need to rotate the DQT tables
-    // if we detect that the photo is in portrait orientation! This keeps everything consistent.
-
-    // If no DQT tables have been defined (e.g. could have loaded text file!) then override the sig generation!
-    bool bDqtDefined = false;
-
-    for (uint32_t nSet = 0; nSet < 4; nSet++) {
-        if (m_abImgDqtSet[nSet]) {
-            bDqtDefined = true;
-        }
-    }
-
-    if (!bDqtDefined) {
-        m_strHash = "NONE";
-        m_strHashRot = "NONE";
-        return;
-    }
-
-    // NOTE:
-    // The following MD5 code depends on an ASCII string for input
-    // We are therefore using QStringA for the hash input instead
-    // of the generic text functions. No special (non-ASCII)
-    // characters are expected in this string.
-
-    if (DB_SIG_VER == 0x00) {
-        strHashIn = "";
-    } else {
-        strHashIn = "JPEGsnoop";
-    }
-
-    // Need to duplicate DQT0 if we only have one DQT table
-    for (uint32_t nSet = 0; nSet < 4; nSet++) {
-        if (m_abImgDqtSet[nSet]) {
-            strSet = "";
-            strSet = QString("*DQT%1,").arg(nSet);
-            strHashIn += strSet;
-
-            for (uint32_t i = 0; i < 64; i++) {
-                nInd = (!bRotate) ? i : glb_anQuantRotate[i];
-                strTmp = QString("%1,").arg(m_anImgDqtTbl[nSet][nInd], 3, 10, QChar('0'));
-                strHashIn += strTmp;
-            }
-        }                           // if DQTx defined
-    }                             // loop through sets (DQT0..DQT3)
-
-    // Removed CSS from signature after version 0x00
-    if (DB_SIG_VER == 0x00) {
-        strHashIn += "*CSS,";
-        strHashIn += m_strImgQuantCss;
-        strHashIn += ",";
-    }
-
-    strHashIn += "*END";
-    nLenHashIn = strHashIn.length();
-
-    // Display hash input
-    for (int32_t i = 0; i < nLenHashIn; i += 80) {
-        strTmp = "";
-        strTmp = QString("In%1: [").arg(i / 80);
-        strTmp += strHashIn.mid(i, 80);
-        strTmp += "]";
-#ifdef DEBUG_SIG
-        m_pLog->AddLine(strTmp);
-#endif
-    }
-
-    // Copy into buffer
-    Q_ASSERT(nLenHashIn < 2000);
-
-    for (int32_t i = 0; i < nLenHashIn; i++) {
-        pHashIn[i] = strHashIn[i].toLatin1();
-    }
-
-    // Calculate the hash
-    MD5Init(&sMd5, 0);
-    MD5Update(&sMd5, pHashIn, nLenHashIn);
-    MD5Final(&sMd5);
-
-    // Overwrite top 8 bits for signature version number
-    sMd5.digest32[0] = (sMd5.digest32[0] & 0x00FFFFFF) + (DB_SIG_VER << 24);
-
-    // Convert hash to string format
-    // The hexadecimal string is converted to Unicode (if that is build directive)
-    if (!bRotate) {
-        m_strHash = QString("%1%2%3%4")
-            .arg(sMd5.digest32[0], 8, 16, QChar('0'))
-            .arg(sMd5.digest32[1], 8, 16, QChar('0'))
-            .arg(sMd5.digest32[2], 8, 16, QChar('0'))
-            .arg(sMd5.digest32[3], 8, 16, QChar('0'));
-        m_strHash = m_strHash.toUpper();
-    } else {
-        m_strHashRot = QString("%1%2%3%4")
-            .arg(sMd5.digest32[0], 8, 16, QChar('0'))
-            .arg(sMd5.digest32[1], 8, 16, QChar('0'))
-            .arg(sMd5.digest32[2], 8, 16, QChar('0'))
-            .arg(sMd5.digest32[3], 8, 16, QChar('0'));
-        m_strHashRot = m_strHashRot.toUpper();
-    }
-
-    //  QByteArray in(reinterpret_cast<char *>(pHashIn), nLenHashIn);
-    //  m_strHash = QCryptographicHash::hash(reinterpret_cast<char *>(pHashIn), QCryptographicHash::Md5).toHex();
-}
-
-//-----------------------------------------------------------------------------
-// Generate the compression signatures for the thumbnails
-void JfifDecode::prepareSignatureThumb() {
-    // Generate m_strHashThumb
-    prepareSignatureThumbSingle(false);
-    // Generate m_strHashThumbRot
-    prepareSignatureThumbSingle(true);
-}
-
-//-----------------------------------------------------------------------------
-// Prepare the image signature for later submission
-// NOTE: ASCII vars are used (instead of unicode) to support usage of MD5 library
-void JfifDecode::prepareSignatureThumbSingle(bool bRotate) {
-    QString strTmp;
-    QString strSet;
-    QString strHashIn;
-
-    unsigned char pHashIn[2000];
-
-    QString strDqt;
-
-    MD5_CTX sMd5;
-
-    int32_t nLenHashIn;
-    uint32_t nInd;
-
-    // -----------------------------------------------------------
-    // Calculate the MD5 hash for online/internal database!
-    // signature "00" : DQT0,DQT1,CSS
-    // signature "01" : salt,DQT0,DQT1
-
-    // Build the source string
-    // NOTE: For the purposes of the hash, we need to rotate the DQT tables
-    // if we detect that the photo is in portrait orientation! This keeps everything
-    // consistent.
-
-    // If no DQT tables have been defined (e.g. could have loaded text file!)
-    // then override the sig generation!
-    bool bDqtDefined = false;
-
-    for (uint32_t nSet = 0; nSet < 4; nSet++) {
-        if (m_abImgDqtThumbSet[nSet]) {
-            bDqtDefined = true;
-        }
-    }
-
-    if (!bDqtDefined) {
-        m_strHashThumb = "NONE";
-        m_strHashThumbRot = "NONE";
-        return;
-    }
-
-    if (DB_SIG_VER == 0x00) {
-        strHashIn = "";
-    } else {
-        strHashIn = "JPEGsnoop";
-    }
-
-    //tblSelY = m_anSofQuantTblSel_Tqi[0]; // Y
-    //tblSelC = m_anSofQuantTblSel_Tqi[1]; // Cb (should be same as for Cr)
-
-    // Need to duplicate DQT0 if we only have one DQT table
-
-    for (uint32_t nSet = 0; nSet < 4; nSet++) {
-        if (m_abImgDqtThumbSet[nSet]) {
-            strSet = "";
-            strSet = QString("*DQT%1,").arg(nSet);
-            strHashIn += strSet;
-
-            for (uint32_t i = 0; i < 64; i++) {
-                nInd = (!bRotate) ? i : glb_anQuantRotate[i];
-                strTmp = QString("%1,").arg(m_anImgThumbDqt[nSet][nInd], 3, 10, QChar('0'));
-                strHashIn += strTmp;
-            }
-        }                           // if DQTx defined
-    }                             // loop through sets (DQT0..DQT3)
-
-    // Removed CSS from signature after version 0x00
-    if (DB_SIG_VER == 0x00) {
-        strHashIn += "*CSS,";
-        strHashIn += m_strImgQuantCss;
-        strHashIn += ",";
-    }
-
-    strHashIn += "*END";
-    nLenHashIn = strHashIn.length();
-
-    //  qDebug() << "Hash" << strHashIn << strHashIn.length() << strHashIn.toLatin1();
-    //  QByteArray s;
-    //  s = QCryptographicHash::hash(strHashIn.toLatin1(), QCryptographicHash::Md5);
-    //  qDebug() << s;
-
-    // Display hash input
-    for (int32_t i = 0; i < nLenHashIn; i += 80) {
-        strTmp = "";
-        strTmp = QString("In%1: [").arg(i / 80);
-        strTmp += strHashIn.mid(i, 80);
-        strTmp += "]";
-#ifdef DEBUG_SIG
-        //m_pLog->AddLine(strTmp);
-#endif
-    }
-
-    // Copy into buffer
-    Q_ASSERT(nLenHashIn < 2000);
-
-    for (int32_t i = 0; i < nLenHashIn; i++) {
-        pHashIn[i] = strHashIn[i].toLatin1();
-    }
-
-    // Calculate the hash
-    MD5Init(&sMd5, 0);
-    MD5Update(&sMd5, pHashIn, nLenHashIn);
-    MD5Final(&sMd5);
-
-    // Overwrite top 8 bits for signature version number
-    sMd5.digest32[0] = (sMd5.digest32[0] & 0x00FFFFFF) + (DB_SIG_VER << 24);
-
-    // Convert hash to string format
-    if (!bRotate) {
-        m_strHashThumb =
-            QString("%1%2%3%4")
-                .arg(sMd5.digest32[0], 8, 16, QChar('0'))
-                .arg(sMd5.digest32[1], 8, 16, QChar('0'))
-                .arg(sMd5.digest32[2], 8, 16, QChar('0'))
-                .arg(sMd5.digest32[3], 8, 16, QChar('0'));
-    } else {
-        m_strHashThumbRot =
-            QString("%1%2%3%4")
-                .arg(sMd5.digest32[0], 8, 16, QChar('0'))
-                .arg(sMd5.digest32[1], 8, 16, QChar('0'))
-                .arg(sMd5.digest32[2], 8, 16, QChar('0'))
-                .arg(sMd5.digest32[3], 8, 16, QChar('0'));
-    }
-}
-
-//-----------------------------------------------------------------------------
 // Parse the embedded JPEG thumbnail. This routine is a much-reduced
 // version of the main JFIF parser, in that it focuses primarily on the
 // DQT tables.
@@ -7468,7 +7046,7 @@ void JfifDecode::decodeEmbeddedThumb() {
 
         // Now calculate the signature
         if (!bErrorAny) {
-            prepareSignatureThumb();
+            // prepareSignatureThumb();
             _log.info("");
             strTmp = QString("  * Embedded Thumb Signature: %1").arg(m_strHashThumb);
             _log.info(strTmp);
@@ -7483,9 +7061,8 @@ void JfifDecode::decodeEmbeddedThumb() {
     _pos = nPosSaved;
 }
 
-//-----------------------------------------------------------------------------
 // Lookup the EXIF marker name from the code value
-bool JfifDecode::getMarkerName(uint32_t nCode, QString &markerStr) {
+bool JfifDecode::getMarkerName(uint32_t code, QString &marker) {
     bool bDone = false;
     bool bFound = false;
 
@@ -7494,10 +7071,10 @@ bool JfifDecode::getMarkerName(uint32_t nCode, QString &markerStr) {
     while (!bDone) {
         if (_markerNames[nInd].nCode == 0) {
             bDone = true;
-        } else if (_markerNames[nInd].nCode == nCode) {
+        } else if (_markerNames[nInd].nCode == code) {
             bDone = true;
             bFound = true;
-            markerStr = _markerNames[nInd].strName;
+            marker = _markerNames[nInd].strName;
             return true;
         } else {
             nInd++;
@@ -7505,15 +7082,14 @@ bool JfifDecode::getMarkerName(uint32_t nCode, QString &markerStr) {
     }
 
     if (!bFound) {
-        markerStr = "";
-        markerStr = QString("(0xFF%1)").arg(nCode, 2, 16, QChar('0'));
+        marker = "";
+        marker = QString("(0xFF%1)").arg(code, 2, 16, QChar('0'));
         return false;
     }
 
     return true;
 }
 
-//-----------------------------------------------------------------------------
 // Determine if the file is an AVI MJPEG.
 // If so, parse the headers.
 // TODO: Expand this function to use sub-functions for each block type
@@ -7873,20 +7449,10 @@ bool JfifDecode::decodeAvi() {
     return _aviMjpeg;
 }
 
-//-----------------------------------------------------------------------------
 // This is the primary JFIF parsing routine.
 // The main loop steps through all of the JFIF markers and calls
 // DecodeMarker() each time until we reach the end of file or an error.
 // Finally, we invoke the compression signature search function.
-//
-// Processing starts at the file offset m_pAppConfig->startPos()
-//
-// INPUT:
-// - inFile                                             = Input file pointer
-//
-// PRE:
-// - m_pAppConfig->startPos()    = Starting file offset for decode
-//
 void JfifDecode::processFile(uint32_t position) {
     // Reset the JFIF decoder state as we may be redoing another file
     reset();
@@ -7895,12 +7461,6 @@ void JfifDecode::processFile(uint32_t position) {
     if (_imgSrcDirty) {
         _imgDec.resetState();
     }
-
-    // Ensure the status bar has been allocated
-    // NOTE: The stat bar is NULL if we drag & drop a file onto
-    //       the JPEGsnoop app icon.
-
-    setStatusText("Processing...");
 
     // Note that we don't clear out the logger (with m_pLog->Reset())
     // as we want top-level caller to do this. This way we can
@@ -7924,7 +7484,7 @@ void JfifDecode::processFile(uint32_t position) {
     // Test for AVI file
     // - Detect header
     // - start from beginning of file
-    // decodeAvi();
+    decodeAvi();
     // TODO: Should we skip decode of file if not MJPEG?
     // ----------------------------------------------------------------
 
@@ -7983,9 +7543,9 @@ void JfifDecode::processFile(uint32_t position) {
 
             // NOTE: The following assumes m_anSofHorzSampFact_Hi and m_anSofVertSampFact_Vi
             // are non-zero as otherwise we'll have a divide-by-0 exception.
-            uint32_t nCompIdent = m_anSofQuantCompId[SCAN_COMP_CB];
-            uint32_t nCssFactH = m_nSofHorzSampFactMax_Hmax / m_anSofHorzSampFact_Hi[nCompIdent];
-            uint32_t nCssFactV = m_nSofVertSampFactMax_Vmax / m_anSofVertSampFact_Vi[nCompIdent];
+            const auto nCompIdent = m_anSofQuantCompId[SCAN_COMP_CB];
+            const auto nCssFactH = m_nSofHorzSampFactMax_Hmax / m_anSofHorzSampFact_Hi[nCompIdent];
+            const auto nCssFactV = m_nSofVertSampFactMax_Vmax / m_anSofVertSampFact_Vi[nCompIdent];
 
             if (m_eImgLandscape != ENUM_LANDSCAPE_NO) {
                 // Landscape orientation
@@ -8001,18 +7561,7 @@ void JfifDecode::processFile(uint32_t position) {
         decodeEmbeddedThumb();
 
         // Generate the signature
-        prepareSignature();
-
-        // Compare compression signature
-        if (_appConfig.searchSig()) {
-            // In the case of lossless files, there won't be any DQT and
-            // hence no compression signatures to compare. Therefore, skip this process.
-            if (m_strHash == "NONE") {
-                _log.warn("Skipping compression signature search as no DQT");
-            } else {
-                // compareSignature();
-            }
-        }
+        // prepareSignature();
 
         if (dataAfterEof > 0) {
             _log.info("");
@@ -8022,31 +7571,15 @@ void JfifDecode::processFile(uint32_t position) {
                           .arg(_posFileEnd, 8, 16, QChar('0'))
                           .arg(dataAfterEof));
         }
-
-        // Print out the special-purpose outputs
-        outputSpecial();
     }
-
-    // Reset the status bar text
-    setStatusText("Done");
 
     // Mark the file as closed
     //m_pWBuf->BufFileUnset();
 }
 
-//-----------------------------------------------------------------------------
 // Determine if the analyzed file is in a state ready for image
 // extraction. Confirms that the important JFIF markers have been
 // detected in the previous analysis.
-//
-// PRE:
-// - m_nPosEmbedStart
-// - m_nPosEmbedEnd
-// - m_nPosFileEnd
-//
-// RETURN:
-// - True if image is ready for extraction
-//
 bool JfifDecode::exportJpegPrepare(bool forceSoi, bool forceEoi, bool ignoreEoi) {
     // Extract from current file
     //   [m_nPosEmbedStart ... m_nPosEmbedEnd]
@@ -8161,102 +7694,6 @@ bool JfifDecode::exportJpegDo(const QString &outFilePath, bool overlayEnabled, b
     return true;
 }
 
-// Export a subset of the file with no overlays or mods
-bool JfifDecode::exportJpegDoRange(const QString &strFileIn, QString strFileOut, uint32_t nStart, uint32_t nEnd) {
-    QFile *pFileOutput;
-
-    QString strTmp = "";
-
-    strTmp = QString("  Exporting range to:   [%1]").arg(strFileOut);
-    _log.info(strTmp);
-
-    if (strFileIn == strFileOut) {
-        _log.error("Can't overwrite source file. Aborting export.");
-
-        return false;
-    }
-
-    Q_ASSERT(strFileIn != "");
-
-    if (strFileIn == "") {
-        _log.error("Export but source filename empty");
-
-        return false;
-    }
-
-    pFileOutput = new QFile(strFileOut);
-
-    if ((pFileOutput->open(QIODevice::WriteOnly)) == false) {
-        QString strError;
-
-        strError = QString("Couldn't open file for write [%1]: [%2]").arg(strFileOut).arg(pFileOutput->errorString());
-        _log.error(strError);
-
-        pFileOutput = nullptr;
-
-        return false;
-    }
-
-    uint32_t nCopyStart;
-    uint32_t nCopyEnd;
-    uint32_t nCopyLeft;
-    uint32_t ind;
-
-    uint8_t *pBuf;
-
-    pBuf = new uint8_t[EXPORT_BUF_SIZE + 10];
-
-    if (!pBuf) {
-        if (pFileOutput) {
-            delete pFileOutput;
-            pFileOutput = nullptr;
-        }
-
-        return false;
-    }
-
-    // Step 1
-    nCopyStart = nStart;
-    nCopyEnd = nEnd;
-    ind = nCopyStart;
-
-    while (ind < nCopyEnd) {
-        nCopyLeft = nCopyEnd - ind + 1;
-
-        if (nCopyLeft > EXPORT_BUF_SIZE) {
-            nCopyLeft = EXPORT_BUF_SIZE;
-        }
-
-        for (uint32_t ind1 = 0; ind1 < nCopyLeft; ind1++) {
-            pBuf[ind1] = getByte(ind + ind1, false);
-        }
-
-        pFileOutput->write(reinterpret_cast<char *>(pBuf), nCopyLeft);
-        ind += nCopyLeft;
-        strTmp = QString("Exporting %1%%...").arg(ind * 100 / (nCopyEnd - nCopyStart), 3);
-        setStatusText(strTmp);
-    }
-
-    // Free up space
-    pFileOutput->close();
-
-    if (pBuf) {
-        delete[]pBuf;
-        pBuf = nullptr;
-    }
-
-    if (pFileOutput) {
-        delete pFileOutput;
-        pFileOutput = nullptr;
-    }
-
-    setStatusText("");
-    strTmp = "  Export range done";
-    _log.info(strTmp);
-
-    return true;
-}
-
 // ====================================================================================
 // JFIF Decoder Constants
 // ====================================================================================
@@ -8362,8 +7799,3 @@ const quint8 JfifDecode::_motionJpegDhtSeg[JFIF_DHT_FAKE_SZ] = {
     0xD9, 0xDA, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8,
     0xF9, 0xFA
 };
-
-// TODO: Add ITU-T Example DQT & DHT
-//       These will be useful for GeoRaster decode (ie. JPEG-B)
-
-QString glb_strMsgStopDecode = "  Stopping decode. Use [Relaxed Parsing] to continue.";

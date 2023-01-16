@@ -140,12 +140,11 @@ public:
     void reset();
 
     // Public accesssor & mutator functions
-    void getAviMode(bool &isAvi, bool &isMjpeg);
+    void getAviMode(bool &isAvi, bool &isMjpeg) const;
     void setAviMode(bool isAvi, bool isMjpeg);
     uint32_t getPosEmbedStart() const;
     uint32_t getPosEmbedEnd() const;
-    void getDecodeSummary(QString &strHash, QString &strHashRot, QString &strImgExifMake, QString &strImgExifModel,
-                          QString &strImgQualExif, QString &strSoftware, teDbAdd &eDbReqSuggest);
+    void getDecodeSummary(QString &strHash, QString &strHashRot, QString &strImgExifMake, QString &strImgExifModel, QString &strImgQualExif, QString &strSoftware, teDbAdd &eDbReqSuggest);
     uint32_t getDqtZigZagIndex(uint32_t nInd, bool bZigZag);
     uint32_t getDqtQuantStd(uint32_t nInd);
 
@@ -163,16 +162,9 @@ signals:
 private:
     uint32_t writeBuf(QFile &file, uint32_t startOffset, uint32_t endOffset, bool overlayEnabled);
 
-    void prepareSignature();
-    void prepareSignatureSingle(bool bRotate);
-    void prepareSignatureThumb();
-    void prepareSignatureThumbSingle(bool bRotate);
-    // bool compareSignature(bool bQuiet);
-    void outputSpecial();
-
     // Display routines
     void dbgAddLine(const QString &strLine);
-    void addHeader(uint32_t nCode);
+    void addHeader(uint32_t code);
     QString printAsHexUc(uint8_t *anBytes, uint32_t nCount);
     QString printAsHex8(uint32_t *anBytes, uint32_t nCount);
     QString printAsHex32(uint32_t *anWords, uint32_t nCount);
@@ -186,19 +178,17 @@ private:
     uint32_t readSwap4(uint32_t nPos);
     uint32_t readBe4(uint32_t nPos);
 
-    bool exportJpegDoRange(const QString& strFileIn, QString strFileOut, uint32_t nStart, uint32_t nEnd);
-
     uint32_t decodeMarker();
     bool expectMarkerEnd(uint32_t nMarkerStart, uint32_t nMarkerLen);
     void decodeEmbeddedThumb();
     bool decodeAvi();
 
-    bool validateValue(uint32_t &nVal, uint32_t nMin, uint32_t nMax, QString strName, bool bOverride, uint32_t nOverrideVal);
+    bool validateValue(uint32_t &nVal, uint32_t nMin, uint32_t nMax, const QString& strName, bool bOverride, uint32_t nOverrideVal);
 
     // Marker specific parsing
-    bool getMarkerName(uint32_t nCode, QString &markerStr);
+    static bool getMarkerName(uint32_t code, QString &marker);
     uint32_t decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart, uint32_t nStartIfdPtr);
-    //      uint32_t                DecodeMakerIfd(uint32_t ifd_tag,uint32_t ptr,uint32_t len);
+    // uint32_t DecodeMakerIfd(uint32_t ifd_tag,uint32_t ptr,uint32_t len);
     bool decodeMakerSubType();
     void decodeDht(bool bInject);
     uint32_t decodeApp13Ps();
@@ -220,7 +210,6 @@ private:
     QString lookupExifTag(const QString &strSect, uint32_t nTag, bool &bUnknown);
     CStr2 lookupMakerCanonTag(uint32_t nMainTag, uint32_t nSubTag, uint32_t nVal);
 
-    void setStatusText(const QString &msg);
     void decodeErrCheck(bool bRet);
 
     ILog &_log;
@@ -232,7 +221,6 @@ private:
 
     uint8_t _writeBuf[EXPORT_BUF_SIZE];
     bool _verbose;
-    bool _outputDb;
     bool _bufFakeDht;           // Flag to redirect DHT read to AVI DHT over Buffer content
 
     // Constants
@@ -334,9 +322,6 @@ private:
     uint32_t m_nImgThumbNumLines;
     uint32_t m_nImgThumbSampsPerLine;
 
-    // Signature handling
-    bool m_bSigExactInDB;         // Is current entry already in local DB?
-
     // State of decoder -- have we seen each marker?
     bool _stateAbort;           // Do we abort decoding? (eg. user hits cancel after errs)
 
@@ -360,8 +345,6 @@ private:
     QString m_strImgQualExif;     // Quality (e.g. "fine") from makernotes
     QString m_strSoftware;        // EXIF Software field
     bool m_bImgExifMakernotes;    // Are any Makernotes present?
-
-    teEdited m_eImgEdited;        // Image edited? 0 = unset, 1 = yes, etc.
 };
 
 #endif

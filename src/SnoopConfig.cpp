@@ -24,10 +24,6 @@ SnoopConfig::SnoopConfig(QObject *parent) : QObject(parent) {
     _outputDhtExpand = false;     // Print expanded huffman tables
     _decodeMaker = true;
 
-    // Difference in performance: 1dsmk2 image:
-    // Performance boost ~ 25%
-    _statClipEnabled = false;     // UNUSED: Enable Scan Decode clip stats?
-
     _exifHideUnknown = true;      // Default to hiding unknown EXIF tags
     _relaxedParsing = true;       // Normal parsing stops on bad marker
 
@@ -35,5 +31,3 @@ SnoopConfig::SnoopConfig(QObject *parent) : QObject(parent) {
 
     // _decodeColorConvert = true;   // Perform color convert after scan decode
 }
-
-SnoopConfig::~SnoopConfig(void) = default;

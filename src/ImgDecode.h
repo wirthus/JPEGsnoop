@@ -266,12 +266,7 @@ public:
     bool SetDhtSize(uint32_t nDestId, uint32_t nClass, uint32_t nSize);
     void SetPrecision(uint32_t nPrecision);
 
-    // Utilities
-    void LookupBlkYCC(QPoint p, int32_t &nY, int32_t &nCb, int32_t &nCr);
-
-    void SetMarkerBlk(QPoint p);
     uint32_t GetMarkerCount();
-    QPoint GetMarkerBlk(uint32_t nInd);
 
     void ScanErrorsDisable();
     void ScanErrorsEnable();
@@ -368,7 +363,6 @@ private:
     // Array that indicates whether or not a block has been marked
     // This is generally used to mark ranges for the detailed scan decode feature
     uint32_t m_nMarkersBlkNum;    // Number of 8x8 Block markers
-    QPoint m_aptMarkersBlk[MAX_BLOCK_MARKERS];    // MCU Markers
 
     QString m_strStatusFilePos;   // Status bar text: File Position
     QString m_strTitle;           // Image title
@@ -417,20 +411,6 @@ private:
 
     bool _decodeScanAc;       // User request decode of AC components?
 
-    // Brightest pixel detection
-    int32_t m_nBrightY;
-    int32_t m_nBrightCb;
-    int32_t m_nBrightCr;
-    uint32_t m_nBrightR;
-    uint32_t m_nBrightG;
-    uint32_t m_nBrightB;
-    QPoint m_ptBrightMcu;
-    bool m_bBrightValid;
-
-    // Average pixel intensity
-    int32_t m_nAvgY;
-    bool m_bAvgYValid;
-
     bool m_bScanErrorsDisable;    // Disable scan errors reporting
 
     // Temporary processing of IDCT per block
@@ -443,8 +423,7 @@ private:
 
     // DHT Lookup table for real decode
     // Note: Component destination index is 1-based; first entry [0] is unused
-    int32_t m_anDhtTblSel[MAX_DHT_CLASS][
-        1 + MAX_SOS_COMP_NS];        // DHT table selected for image component index (1..4)
+    int32_t m_anDhtTblSel[MAX_DHT_CLASS][1 + MAX_SOS_COMP_NS];        // DHT table selected for image component index (1..4)
     uint32_t m_anHuffMaskLookup[32];
     // Huffman lookup table for current scan
     uint32_t m_anDhtLookupSetMax[MAX_DHT_CLASS];  // Highest DHT table index (ie. 0..3) per class
@@ -460,18 +439,18 @@ private:
 
     uint32_t m_nScanBuff;         // 32 bits of scan data after removing stuffs
 
-    uint32_t m_nScanBuff_vacant;  // Bits unused in LSB after shifting (add if >= 8)
-    uint32_t m_nScanBuffPtr; // Next uint8_t position to load
-    uint32_t m_nScanBuffPtr_start;   // Saved first position of scan data (reset by RSTn markers)
-    uint32_t m_nScanBuffPtr_first;   // Saved first position of scan data in file (not reset by RSTn markers). For comp ratio.
+    uint32_t m_nScanBuff_vacant;    // Bits unused in LSB after shifting (add if >= 8)
+    uint32_t m_nScanBuffPtr;        // Next uint8_t position to load
+    uint32_t m_nScanBuffPtr_start;  // Saved first position of scan data (reset by RSTn markers)
+    uint32_t m_nScanBuffPtr_first;  // Saved first position of scan data in file (not reset by RSTn markers). For comp ratio.
 
-    bool m_nScanCurErr;           // Mark as soon as error occurs
-    uint32_t m_anScanBuffPtr_pos[4];      // File posn for each uint8_t in buffer
-    uint32_t m_anScanBuffPtr_err[4];      // Does this uint8_t have an error?
+    bool m_nScanCurErr;                 // Mark as soon as error occurs
+    uint32_t m_anScanBuffPtr_pos[4];    // File posn for each uint8_t in buffer
+    uint32_t m_anScanBuffPtr_err[4];    // Does this uint8_t have an error?
     uint32_t m_nScanBuffLatchErr;
-    uint32_t m_nScanBuffPtr_num;  // Number of uint8_ts in buffer
-    uint32_t m_nScanBuffPtr_align;        // Bit alignment in file for 1st uint8_t in buffer
-    bool m_bScanEnd;              // Reached end of scan segment?
+    uint32_t m_nScanBuffPtr_num;        // Number of uint8_ts in buffer
+    uint32_t m_nScanBuffPtr_align;      // Bit alignment in file for 1st uint8_t in buffer
+    bool m_bScanEnd;                    // Reached end of scan segment?
 
     bool m_bRestartRead;          // Have we seen a restart marker?
     uint32_t m_nRestartLastInd;   // Last Restart marker read (0..7)

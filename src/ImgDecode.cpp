@@ -114,19 +114,6 @@ void ImgDecode::reset() {
     m_nBlkXMax = 0;
     m_nBlkYMax = 0;
 
-    m_bBrightValid = false;
-    m_nBrightY = -32768;
-    m_nBrightCb = -32768;
-    m_nBrightCr = -32768;
-    m_nBrightR = 0;
-    m_nBrightG = 0;
-    m_nBrightB = 0;
-    m_ptBrightMcu.setX(0);
-    m_ptBrightMcu.setY(0);
-
-    m_bAvgYValid = false;
-    m_nAvgY = 0;
-
     deleteAndNullBlk(m_pMcuFileMap);
     deleteAndNullBlk(m_pBlkDcValY);
     deleteAndNullBlk(m_pBlkDcValCb);
@@ -2638,17 +2625,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
 
     QString strTmp;
 
-    bool bDieOnFirstErr = false;  // FIXME: do we want this? It makes it less useful for corrupt jpegs
-
-    // Fetch configuration values locally
-    bool decodeScanAc;
-
-    // Add some extra speed-up in hidden mode (we don't need AC)
-    if (display) {
-        decodeScanAc = _appConfig.decodeAc();
-    } else {
-        decodeScanAc = false;
-    }
+    auto dieOnFirstErr = false;  // FIXME: do we want this? It makes it less useful for corrupt jpegs
 
     int32_t nPixMapW = 0;
     int32_t nPixMapH = 0;
@@ -2657,7 +2634,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
     reset();
 
     _scanErrMax = _appConfig.maxDecodeError();
-    _decodeScanAc = decodeScanAc;
+    _decodeScanAc = false;
 
     // Detect the scenario where the image component details haven't been set yet
     // The image details are set via SetImageDetails()
@@ -3042,7 +3019,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
             if ((nMcuY < nDecMcuRowStart) || (nMcuY > nDecMcuRowEnd)) {
                 _decodeScanAc = false;
             } else {
-                _decodeScanAc = decodeScanAc;
+                _decodeScanAc = false;
             }
 
             // Precalculate MCU matrix index
@@ -3101,7 +3078,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
                         CheckScanErrors(nMcuX, nMcuY, nCssIndH, nCssIndV, nComp);
                     }
 
-                    if (!bDscRet && bDieOnFirstErr) {
+                    if (!bDscRet && dieOnFirstErr) {
                         return;
                     }
 
@@ -3197,7 +3174,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
                             CheckScanErrors(nMcuX, nMcuY, nCssIndH, nCssIndV, nComp);
                         }
 
-                        if (!bDscRet && bDieOnFirstErr) {
+                        if (!bDscRet && dieOnFirstErr) {
                             return;
                         }
 
@@ -3241,7 +3218,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
                             CheckScanErrors(nMcuX, nMcuY, nCssIndH, nCssIndV, nComp);
                         }
 
-                        if (!bDscRet && bDieOnFirstErr) {
+                        if (!bDscRet && dieOnFirstErr) {
                             return;
                         }
 
@@ -3581,32 +3558,7 @@ void ImgDecode::decodeScanImg(uint32_t startPosition, bool display, bool quiet) 
                 _log.info("");
             }
         }
-    }                             // !quiet
-
-    // ------------------------------------
-
-    if (display && m_bAvgYValid) {
-        _log.info("  Average Pixel Luminance (Y):");
-        _log.info(QString("    Y=[%1] (range: 0..255)").arg(m_nAvgY, 3));
-        _log.info("");
     }
-
-    if (display && m_bBrightValid) {
-        _log.info("  Brightest Pixel Search:");
-        strTmp = QString("    YCC=[%1,%2,%3] RGB=[%4,%5,%6] @ MCU[%7,%8]")
-            .arg(m_nBrightY, 5)
-            .arg(m_nBrightCb, 5)
-            .arg(m_nBrightCr, 5)
-            .arg(m_nBrightR, 3)
-            .arg(m_nBrightG, 3)
-            .arg(m_nBrightB, 3)
-            .arg(m_ptBrightMcu.x(), 3)
-            .arg(m_ptBrightMcu.y(), 3);
-        _log.info(strTmp);
-        _log.info("");
-    }
-
-    // --------------------------------------
 
     if (!quiet) {
         _log.info("  Finished Decoding SCAN Data");
@@ -3681,28 +3633,6 @@ void ImgDecode::DecodeRestartScanBuf(uint32_t nFilePos, bool bRestart) {
     m_nRestartMcusLeft = m_nRestartInterval;
 }
 
-// Determine the YCC DC value of a specified block
-//
-// INPUT:
-// - nBlkX                                      = 8x8 block coordinate (x)
-// - nBlkY                                      = 8x8 block coordinate (y)
-// OUTPUT:
-// - nY                                         = Y channel value
-// - nCb                                        = Cb channel value
-// - nCr                                        = Cr channel value
-//
-void ImgDecode::LookupBlkYCC(QPoint p, int32_t &nY, int32_t &nCb, int32_t &nCr) {
-    nY = m_pBlkDcValY[p.x() + p.y() * m_nBlkXMax];
-
-    if (m_nNumSosComps == NUM_CHAN_YCC) {
-        nCb = m_pBlkDcValCb[p.x() + p.y() * m_nBlkXMax];
-        nCr = m_pBlkDcValCr[p.x() + p.y() * m_nBlkXMax];
-    } else {
-        nCb = 0;                    // FIXME
-        nCr = 0;                    // FIXME
-    }
-}
-
 // Create a file offset notation that represents bytes and bits
 // - Essentially a fixed-point notation
 //
@@ -3743,76 +3673,6 @@ void ImgDecode::unpackFileOffset(uint32_t nPacked, uint32_t &nByte, uint32_t &nB
 //
 uint32_t ImgDecode::GetMarkerCount() {
     return m_nMarkersBlkNum;
-}
-
-// Fetch an indexed block marker
-//
-// INPUT:
-// - nInd                                       = Index into marker block array
-// RETURN:
-// - Point (8x8 block) from marker array
-//
-QPoint ImgDecode::GetMarkerBlk(uint32_t nInd) {
-    QPoint myPt(0, 0);
-
-    if (nInd < m_nMarkersBlkNum) {
-        myPt = m_aptMarkersBlk[nInd];
-    } else {
-        Q_ASSERT(false);
-    }
-    return myPt;
-}
-
-// Add a block to the block marker list
-// - Also report out the YCC DC value for the block
-//
-// INPUT:
-// - nBlkX                                      = 8x8 block X coordinate
-// - nBlkY                                      = 8x8 block Y coordinate
-// POST:
-// - m_nMarkersBlkNum
-// - m_aptMarkersBlk[]
-//
-void ImgDecode::SetMarkerBlk(QPoint p) {
-    if (m_nMarkersBlkNum == MAX_BLOCK_MARKERS) {
-        // Shift them down by 1. Last entry will be deleted next
-        for (uint32_t ind = 1; ind < MAX_BLOCK_MARKERS; ind++) {
-            m_aptMarkersBlk[ind - 1] = m_aptMarkersBlk[ind];
-        }
-
-        // Reflect new reduced count
-        m_nMarkersBlkNum--;
-    }
-
-    QString strTmp;
-
-    int32_t nY, nCb, nCr;
-    int32_t nMcuX, nMcuY;
-    int32_t nCssX, nCssY;
-
-    // Determine the YCC of the block
-    // Then calculate the MCU coordinate and the block coordinate within the MCU
-    LookupBlkYCC(p, nY, nCb, nCr);
-    nMcuX = p.x() / (m_nMcuWidth / BLK_SZ_X);
-    nMcuY = p.y() / (m_nMcuHeight / BLK_SZ_Y);
-    nCssX = p.x() % (m_nMcuWidth / BLK_SZ_X);
-    nCssY = p.y() % (m_nMcuHeight / BLK_SZ_X);
-
-    strTmp = QString("Position Marked @ MCU=[%1,%2](%3,%4) Block=[%5,%6] YCC=[%7,%8,%9]")
-        .arg(nMcuX, 4)
-        .arg(nMcuY, 4)
-        .arg(nCssX)
-        .arg(nCssY)
-        .arg(p.x(), 4)
-        .arg(p.y(), 4)
-        .arg(nY, 5)
-        .arg(nCb, 5)
-        .arg(nCr, 5);
-    _log.info(strTmp);
-    _log.info("");
-
-    m_aptMarkersBlk[m_nMarkersBlkNum] = p;
-    m_nMarkersBlkNum++;
 }
 
 void ImgDecode::setStatusFilePosText(const QString &text) {
