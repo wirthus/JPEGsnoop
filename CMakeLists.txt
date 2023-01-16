@@ -28,8 +28,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
     -DDEBUG \
 ")
 
-#-Werror \
-
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
     -O3 \
 ")
@@ -55,6 +53,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GN
         -Wno-unused-variable \
     ")
 
+    #-Werror \
+
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
         -g \
     ")
@@ -71,6 +71,12 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         /wd4820 \
         /wd4018 /wd4365 \
     ")
+endif ()
+
+find_program(CCACHE_PROGRAM ccache)
+if (CCACHE_PROGRAM)
+    # Support Unix Makefiles and Ninja
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif ()
 
 set(PROJECT_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build)
