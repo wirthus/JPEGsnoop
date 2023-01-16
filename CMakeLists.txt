@@ -93,12 +93,12 @@ set(SOURCE_FILES
     src/General.cpp
     src/ImgDecode.cpp
     src/JfifDecode.cpp
+    src/log/ConsoleLog.cpp
+    src/main.cpp
     src/Md5.cpp
     src/SnoopConfig.cpp
     src/SnoopCore.cpp
     src/WindowBuf.cpp
-    src/log/ConsoleLog.cpp
-    src/main.cpp
     )
 
 set(HEADER_FILES
@@ -106,18 +106,14 @@ set(HEADER_FILES
     src/General.h
     src/ImgDecode.h
     src/JfifDecode.h
+    src/log/ConsoleLog.h
+    src/log/ILog.h
     src/Md5.h
     src/Snoop.h
     src/SnoopConfig.h
     src/SnoopCore.h
     src/WindowBuf.h
-    src/log/ConsoleLog.h
-    src/log/ILog.h
     )
-
-#set(INL_FILES
-#    src/Signatures.inl
-#    )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${QT_LIBRARIES})
