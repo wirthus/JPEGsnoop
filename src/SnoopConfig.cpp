@@ -2,7 +2,7 @@
 
 #include <QStandardPaths>
 
-SnoopConfig::SnoopConfig(QObject *parent) : QObject(parent) {
+SnoopConfig::SnoopConfig() {
     // Debug log
     // _debugLogFileName = ".\\JPEGsnoop-debug.log";
     // _debugLogStream = nullptr;

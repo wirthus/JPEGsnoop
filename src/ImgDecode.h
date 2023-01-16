@@ -239,13 +239,12 @@ typedef struct {
     uint32_t nClipWhiteOver;
 } PixelCcClip;
 
-class ImgDecode : public QObject {
-Q_OBJECT
+class ImgDecode final {
     Q_DISABLE_COPY(ImgDecode)
 
 public:
-    ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject *parent = nullptr);
-    ~ImgDecode() override;
+    ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig);
+    virtual ~ImgDecode();
 
     void reset();                 // Called during start of SOS decode
     void resetState();            // Called at start of new JFIF Decode
@@ -282,10 +281,6 @@ public:
 
     void reportDctMatrix();
     void reportVlc(uint32_t nVlcPos, uint32_t nVlcAlign, uint32_t nZrl, int32_t nVal, uint32_t nCoeffStart, uint32_t nCoeffEnd, const QString &specialStr);
-
-signals:
-    void updateStatus(const QString &statusMsg, int);
-    void updateImage();
 
 private:
     // DQT Table

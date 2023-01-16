@@ -55,8 +55,7 @@ static constexpr uint32_t MAX_SEGMENT_SIZE = 20 * 1014 * 1024;
 // - Requires that CDocLog, CwindowBuf and CimgDecode classes
 //   are already initialized
 //
-JfifDecode::JfifDecode(ILog &log, WindowBuf &buf, ImgDecode &imgDec, SnoopConfig &appConfig, QObject *parent) :
-    QObject(parent),
+JfifDecode::JfifDecode(ILog &log, WindowBuf &buf, ImgDecode &imgDec, SnoopConfig &appConfig) :
     _log(log),
     _wbuf(buf),
     _imgDec(imgDec),

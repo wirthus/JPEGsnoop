@@ -4,10 +4,6 @@ set(PROJECT_NAME_PREFIX JPEGsnoop)
 project(${PROJECT_NAME_PREFIX} VERSION 1.8.2)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 #set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
@@ -18,18 +14,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
     -Wall \
 ")
 
-#    -fstrict-aliasing -Wextra -pedantic -Weffc++ -Wfloat-equal -Wswitch-default -Wcast-align -Wcast-qual -Wchar-subscripts -Wcomment \
-#    -Wdisabled-optimization -Wformat-nonliteral -Wformat-security -Wconversion -Wformat-nonliteral -Wformat-y2k -Wformat=2 -Wimport \
-#    -Winit-self -Winline -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wold-style-cast \
-#    -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-enum -Wunreachable-code \
-#    -Wunused -Wvariadic-macros -Wwrite-strings \
-
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
     -DDEBUG \
-")
-
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
-    -O3 \
 ")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -54,9 +40,18 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GN
     ")
 
     #-Werror \
+    #    -fstrict-aliasing -Wextra -pedantic -Weffc++ -Wfloat-equal -Wswitch-default -Wcast-align -Wcast-qual -Wchar-subscripts -Wcomment \
+    #    -Wdisabled-optimization -Wformat-nonliteral -Wformat-security -Wconversion -Wformat-nonliteral -Wformat-y2k -Wformat=2 -Wimport \
+    #    -Winit-self -Winline -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wold-style-cast \
+    #    -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-enum -Wunreachable-code \
+    #    -Wunused -Wvariadic-macros -Wwrite-strings \
 
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
         -g \
+    ")
+
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
+        -O3 \
     ")
 elseif ()
     # using GCC

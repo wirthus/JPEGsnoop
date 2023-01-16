@@ -37,8 +37,7 @@
 
 // Constructor for the Image Decoder
 // - This constructor is called only once by Document class
-ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig, QObject *parent) :
-    QObject(parent),
+ImgDecode::ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig) :
     _log(log),
     _wbuf(wbuf),
     _appConfig(appConfig) {

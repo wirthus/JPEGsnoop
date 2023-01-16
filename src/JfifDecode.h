@@ -130,12 +130,11 @@ struct MarkerNameTable {
     QString strName;
 };
 
-class JfifDecode : public QObject {
-Q_OBJECT
+class JfifDecode final {
     Q_DISABLE_COPY(JfifDecode)
 public:
-    JfifDecode(ILog &log, WindowBuf &buf, ImgDecode &imgDec, SnoopConfig &appConfig, QObject *parent = nullptr);
-    ~JfifDecode() override;
+    JfifDecode(ILog &log, WindowBuf &buf, ImgDecode &imgDec, SnoopConfig &appConfig);
+    virtual ~JfifDecode();
 
     void reset();
 
@@ -155,9 +154,6 @@ public:
     bool exportJpegDo(const QString &outFilePath, bool overlayEnabled, bool dhtAviInsert, bool forceSoi, bool forceEoi);
 
     void processFile(uint32_t position);
-
-signals:
-    void updateStatus(QString statusMsg, int);
 
 private:
     uint32_t writeBuf(QFile &file, uint32_t startOffset, uint32_t endOffset, bool overlayEnabled);

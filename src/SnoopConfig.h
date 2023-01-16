@@ -34,13 +34,12 @@
 #include <QSettings>
 #include <QTextStream>
 
-class SnoopConfig : public QObject {
-Q_OBJECT
+class SnoopConfig final {
     Q_DISABLE_COPY(SnoopConfig)
 
 public:
-    explicit SnoopConfig(QObject *parent = nullptr);
-    ~SnoopConfig() override = default;
+    explicit SnoopConfig();
+    ~SnoopConfig() = default;
 
     int32_t maxDecodeError() const { return _errMaxDecodeScan; }
 
