@@ -116,9 +116,9 @@ void JfifDecode::reset() {
     m_nImgExifMakeSubtype = 0;
     m_strImgExifModel = "???";
     m_bImgExifMakernotes = false;
-    m_strImgExtras = "";
-    m_strComment = "";
-    m_strSoftware = "";
+    m_strImgExtras.clear();
+    m_strComment.clear();
+    m_strSoftware.clear();
     m_bImgProgressive = false;
     m_bImgSofUnsupported = false;
     strcpy(_app0Identifier, "");
@@ -127,7 +127,7 @@ void JfifDecode::reset() {
     m_strHash = "NONE";
     m_strHashRot = "NONE";
     m_eImgLandscape = ENUM_LANDSCAPE_UNSET;
-    m_strImgQualExif = "";
+    m_strImgQualExif.clear();
     _avi = false;
     _aviMjpeg = false;
     _psd = false;
@@ -530,8 +530,6 @@ uint32_t JfifDecode::byteSwap2(uint32_t nByte0, uint32_t nByte1) {
 // Only the most common makernotes are supported; there are a large
 // number of makernotes that have not been documented anywhere.
 CStr2 JfifDecode::lookupMakerCanonTag(uint32_t nMainTag, uint32_t nSubTag, uint32_t nVal) {
-    QString strTmp;
-
     CStr2 sRetVal;
 
     sRetVal.strTag = "???";
@@ -1941,7 +1939,7 @@ bool JfifDecode::decodeMakerSubType() {
     m_nImgExifMakeSubtype = 0;
 
     if (m_strImgExifMake == "NIKON") {
-        strTmp = "";
+        strTmp.clear();
         for (uint32_t nInd = 0; nInd < 5; nInd++) {
             strTmp += getByte(_pos + nInd);
         }
@@ -1973,7 +1971,7 @@ bool JfifDecode::decodeMakerSubType() {
         }
 
     } else if (m_strImgExifMake == "SIGMA") {
-        strTmp = "";
+        strTmp.clear();
         for (uint32_t ind = 0; ind < 8; ind++) {
             if (getByte(_pos + ind) != 0)
                 strTmp += getByte(_pos + ind);
@@ -1991,7 +1989,7 @@ bool JfifDecode::decodeMakerSubType() {
 
     }                             // SIGMA
     else if (m_strImgExifMake == "FUJIFILM") {
-        strTmp = "";
+        strTmp.clear();
 
         for (uint32_t ind = 0; ind < 8; ind++) {
             if (getByte(_pos + ind) != 0)
@@ -2012,7 +2010,7 @@ bool JfifDecode::decodeMakerSubType() {
 
     }                             // FUJIFILM
     else if (m_strImgExifMake == "SONY") {
-        strTmp = "";
+        strTmp.clear();
 
         for (uint32_t ind = 0; ind < 12; ind++) {
             if (getByte(_pos + ind) != 0)
@@ -2635,7 +2633,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
             // ----------------------------------------
             case 1:
                 strFull = "        Unsigned Byte=[";
-                strValOut = "";
+                strValOut.clear();
 
                 // Limit display output
                 nCompsToDisplay = qMin(uint32_t(MAX_anValues), nIfdNumComps);
@@ -2670,7 +2668,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
                 // ----------------------------------------
             case 2:
                 strFull = "        String=";
-                strValOut = "";
+                strValOut.clear();
                 char cVal;
 
                 quint8 nVal;
@@ -2762,7 +2760,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
                     // Try to handle multiple entries... note that this
                     // is used by the Maker notes IFD decode
 
-                    strValOut = "";
+                    strValOut.clear();
                     strFull = "        Unsigned Short=[";
 
                     for (uint32_t nInd = 0; nInd < nCompsToDisplay; nInd++) {
@@ -2787,7 +2785,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
                 // ----------------------------------------
             case 4:
                 strFull = "        Unsigned Long=[";
-                strValOut = "";
+                strValOut.clear();
 
                 // Limit display output
                 nCompsToDisplay = qMin(MAX_anValues, nIfdNumComps);
@@ -2819,7 +2817,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
             case 5:
                 // Unsigned Rational
                 strFull = "        Unsigned Rational=[";
-                strValOut = "";
+                strValOut.clear();
 
                 // Limit display output
                 nCompsToDisplay = qMin(MAX_anValues, nIfdNumComps);
@@ -2849,7 +2847,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
                 // It is usually used for 32-bit pointers (in case of offsets), but could
                 // also represent ExifVersion, etc.
                 strFull = "        Undefined=[";
-                strValOut = "";
+                strValOut.clear();
 
                 // Limit display output
                 nCompsToDisplay = qMin(MAX_anValues, nIfdNumComps);
@@ -2921,7 +2919,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
                     // Note that we don't call LookupMakerCanonTag() here
                     // as that is only needed for the "unsigned short", not
                     // "signed short".
-                    strValOut = "";
+                    strValOut.clear();
                     strFull = "        Signed Short=[";
 
                     for (uint32_t nInd = 0; nInd < nCompsToDisplay; nInd++) {
@@ -2947,7 +2945,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
             case 10:
                 // Signed Rational
                 strFull = "        Signed Rational=[";
-                strValOut = "";
+                strValOut.clear();
 
                 // Limit display output
                 nCompsToDisplay = qMin(MAX_anValues, nIfdNumComps);
@@ -3710,7 +3708,7 @@ uint32_t JfifDecode::decodeExifIfd(const QString &strIfd, uint32_t nPosExifStart
         // Determine MakerNote support
         // ==========================================================================
 
-        if (m_strImgExifMake != "") {
+        if (!m_strImgExifMake.isEmpty()) {
             // 1) Identify the supported MakerNotes
             // 2) Remap variations of the Maker field (e.g. Nikon)
             //    as some manufacturers have been inconsistent in their
@@ -4505,7 +4503,7 @@ void JfifDecode::decodeDht(bool bInject) {
                 // Only write 16 codes per line
                 if ((nIndCode % 16) == 15) {
                     _log.info(strFull);
-                    strFull = "";
+                    strFull.clear();
                 }
 
                 // Save the huffman code
@@ -4811,7 +4809,7 @@ uint32_t JfifDecode::decodeMarker() {
     uint32_t nColTransform = 0;   // Color Transform from APP14 marker
 
     // For DQT
-    QString strDqtPrecision = "";
+    QString strDqtPrecision;
 
     // QString strDqtZigZagOrder = "";
 
@@ -5063,8 +5061,8 @@ uint32_t JfifDecode::decodeMarker() {
 
                 uint8_t acIdentifierTiff[9];
 
-                strFull = "";
-                strTmp = "";
+                strFull.clear();
+                strTmp.clear();
 
                 strFull = "  Identifier TIFF = ";
 
@@ -5274,7 +5272,7 @@ uint32_t JfifDecode::decodeMarker() {
             _log.info(QString("  Length     = %1").arg(nLength));
 
             if (_verbose) {
-                strFull = "";
+                strFull.clear();
 
                 for (uint32_t i = 0; i < nLength; i++) {
                     // Start a new line for every 16 codes
@@ -5289,13 +5287,13 @@ uint32_t JfifDecode::decodeMarker() {
 
                     if ((i % 16) == 15) {
                         _log.info(strFull);
-                        strFull = "";
+                        strFull.clear();
                     }
                 }
 
                 _log.info(strFull);
 
-                strFull = "";
+                strFull.clear();
 
                 for (uint32_t i = 0; i < nLength; i++) {
                     // Start a new line for every 16 codes
@@ -5554,7 +5552,7 @@ uint32_t JfifDecode::decodeMarker() {
             strTmp = QString("  Custom coeff scan sequence");
             m_pLog->AddLine(strTmp);
             // Now expect sequence of 64 coefficient entries
-            QString strSequence = "";
+            QString strSequence.clear();
 
             for(uint32_t nInd = 0; nInd < 64; nInd++)
             {
@@ -6153,7 +6151,7 @@ uint32_t JfifDecode::decodeMarker() {
 
             // Assume COM field valid length (ie. >= 2)
             strFull = "    Comment=";
-            m_strComment = "";
+            m_strComment.clear();
 
             for (uint32_t ind = 0; ind < nLength - 2; ind++) {
                 nTmpVal1 = getByte(_pos++);
@@ -6284,7 +6282,7 @@ uint32_t JfifDecode::decodeMarker() {
             nSkipPos = 0;
             bScanDumpTrunc = false;
 
-            strFull = "";
+            strFull.clear();
 
             while (!bSkipDone) {
                 nSkipCount++;
@@ -6325,7 +6323,7 @@ uint32_t JfifDecode::decodeMarker() {
 
                         if (((nSkipPos - 1) % 32) == 31) {
                             _log.info(strFull);
-                            strFull = "";
+                            strFull.clear();
                         }
                     }
                 }
@@ -6893,7 +6891,7 @@ void JfifDecode::decodeEmbeddedThumb() {
                             nTmpVal = getByte(_pos++);
                             nDqtPrecision_Pq = (nTmpVal & 0xF0) >> 4;
                             nDqtQuantDestId_Tq = nTmpVal & 0x0F;
-                            QString strPrecision = "";
+                            QString strPrecision;
 
                             if (nDqtPrecision_Pq == 0) {
                                 strPrecision = "8 bits";
@@ -7081,7 +7079,7 @@ bool JfifDecode::getMarkerName(uint32_t code, QString &marker) {
     }
 
     if (!bFound) {
-        marker = "";
+        marker.clear();
         marker = QString("(0xFF%1)").arg(code, 2, 16, QChar('0'));
         return false;
     }
@@ -7245,7 +7243,7 @@ bool JfifDecode::decodeAvi() {
                 xdwSampleSize = _wbuf.getDataX(_pos, 4, bSwap);
                 _pos += 4;
 
-                QString fccTypeDecode = "";
+                QString fccTypeDecode;
 
                 if (fccType == "vids") {
                     fccTypeDecode = "[vids] Video";
@@ -7383,7 +7381,7 @@ bool JfifDecode::decodeAvi() {
                 _pos += 4;
 
                 if (strInfoId == "ISFT") {
-                    QString strIsft = "";
+                    QString strIsft;
 
                     strIsft = _wbuf.readStrN(_pos, nChunkSize);
                     strIsft = strIsft.trimmed();  //!! trim right
@@ -7403,7 +7401,7 @@ bool JfifDecode::decodeAvi() {
         } else if (strHeader == "IDIT") {
             // Timestamp info (Canon, etc.)
 
-            QString strIditTimestamp = "";
+            QString strIditTimestamp;
 
             strIditTimestamp = _wbuf.readStrN(_pos, nChunkSize);
             strIditTimestamp = strIditTimestamp.trimmed();    //!!

@@ -134,7 +134,7 @@ class JfifDecode final {
     Q_DISABLE_COPY(JfifDecode)
 public:
     JfifDecode(ILog &log, WindowBuf &buf, ImgDecode &imgDec, SnoopConfig &appConfig);
-    virtual ~JfifDecode();
+    ~JfifDecode();
 
     void reset();
 

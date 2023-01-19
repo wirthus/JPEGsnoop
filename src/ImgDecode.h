@@ -244,7 +244,7 @@ class ImgDecode final {
 
 public:
     ImgDecode(ILog &log, WindowBuf &wbuf, SnoopConfig &appConfig);
-    virtual ~ImgDecode();
+    ~ImgDecode();
 
     void reset();                 // Called during start of SOS decode
     void resetState();            // Called at start of new JFIF Decode

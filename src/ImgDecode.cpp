@@ -1894,7 +1894,7 @@ bool ImgDecode::DecodeScanCompPrint(uint32_t nTblDhtDc, uint32_t nTblDhtAc, uint
         nVal2 = static_cast<int16_t>(nVal & 0xFFFF);
 
         if (eRsvRet == RSV_OK) {
-            strSpecial = "";
+            strSpecial.clear();
             // DC entry is always one value only
             // FIXME: Do I need nTblDqt == 4 as well?
             if (bDC) {
@@ -2015,7 +2015,7 @@ void ImgDecode::reportDctMatrix() {
         }
 
         for (uint32_t nX = 0; nX < 8; nX++) {
-            strTmp = "";
+            strTmp.clear();
             nCoefVal = m_anDctBlock[nY * 8 + nX];
             strTmp = QString("%1").arg(nCoefVal, 5);
             strLine.append(strTmp);

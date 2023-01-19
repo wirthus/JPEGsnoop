@@ -586,7 +586,7 @@ QString DecodePs::PhotoshopParseGetBimLStrUni(uint32_t nPos, uint32_t &nPosOffse
     nStrLenTrunc = nStrLenActual;
 
     // Initialize return
-    strVal = "";
+    strVal.clear();
 
     if (nStrLenTrunc > 0) {
         // Read unicode bytes into byte array
@@ -717,8 +717,8 @@ void DecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, ui
     uint32_t nLenClip;
 
     nLenClip = qMin(nLen, PS_HEX_TOTAL);
-    strValHex = "";
-    strValAsc = "";
+    strValHex.clear();
+    strValAsc.clear();
 
     while (!bDone) {
         // Have we reached the end of the data we wish to display?
@@ -726,8 +726,8 @@ void DecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, ui
             bDone = true;
         } else {
             // Reset the cumulative hex/ascii value strings
-            strValHex = "";
-            strValAsc = "";
+            strValHex.clear();
+            strValAsc.clear();
 
             // Build the hex/ascii value strings
             for (uint32_t nInd = 0; nInd < PS_HEX_MAX_ROW; nInd++) {
@@ -779,8 +779,8 @@ QString DecodePs::PhotoshopDispHexWord(uint32_t nVal) {
     uint32_t nByte;
 
     // Reset the cumulative hex/ascii value strings
-    strValHex = "";
-    strValAsc = "";
+    strValHex.clear();
+    strValAsc.clear();
 
     // Build the hex/ascii value strings
     for (uint32_t nInd = 0; nInd <= 3; nInd++) {
@@ -810,7 +810,7 @@ QString DecodePs::PhotoshopDispHexWord(uint32_t nVal) {
 // Look up the enumerated constant (nVal) for the specified field (eEnumField)
 // - Returns "" if the field wasn't found
 QString DecodePs::PhotoshopParseLookupEnum(teBimEnumField eEnumField, uint32_t nVal) {
-    QString strVal = "";
+    QString strVal;
 
     // Find the enum value
     bool bDone = false;
@@ -1687,7 +1687,7 @@ bool DecodePs::PhotoshopParseLayerRecord(uint32_t &nPos, uint32_t nIndent, tsLay
     if (bDecOk) {
         uint32_t nLayerNameLen = m_pWBuf->getData1(nPos, PS_BSWAP);
 
-        QString strLayerName = m_pWBuf->readStrN(nPos, nLayerNameLen);
+        // const auto strLayerName = m_pWBuf->readStrN(nPos, nLayerNameLen);
 
         nPos += nLayerNameLen;
         // According to spec, length is padded to multiple of 4 bytes,
@@ -1788,8 +1788,6 @@ bool DecodePs::PhotoshopParseLayerMask(uint32_t &nPos, uint32_t nIndent) {
 // - nPos               = File position after reading the block
 //
 bool DecodePs::PhotoshopParseLayerBlendingRanges(uint32_t &nPos, uint32_t nIndent) {
-    QString strVal;
-
     bool bDecOk = true;
 
     PhotoshopParseReportNote(nIndent, "Layer blending ranges data:");
@@ -1965,8 +1963,6 @@ bool DecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImage
                                        unsigned char *pDibBits) {
     Q_ASSERT(psImageInfo);
 
-    QString strVal;
-
     //PhotoshopParseReportNote(nIndent,"Image data section:");
     PhotoshopParseReportFldOffset(nIndent, "Image data section:", nPos);
 
@@ -2054,8 +2050,6 @@ bool DecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImage
 // - nPos               = File position after reading the block
 //
 bool DecodePs::PhotoshopParseGlobalLayerMaskInfo(uint32_t &nPos, uint32_t nIndent) {
-    QString strVal;
-
     bool bDecOk = true;
 
     PhotoshopParseReportNote(nIndent, "Global layer mask info:");
@@ -2224,8 +2218,6 @@ bool DecodePs::PhotoshopParseAddtlLayerInfo(uint32_t &nPos, uint32_t nIndent) {
 // - nPos               = File position after reading the block
 //
 bool DecodePs::PhotoshopParseImageResourcesSection(uint32_t &nPos, uint32_t nIndent) {
-    QString strVal;
-
     bool bDecOk = true;
 
     PhotoshopParseReportNote(nIndent, "Image Resources Section:");
@@ -2306,7 +2298,7 @@ bool DecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nIndent
     uint32_t nBimId = m_pWBuf->getData2(nPos, PS_BSWAP);
     uint32_t nResNameLen = m_pWBuf->getData1(nPos, PS_BSWAP);
 
-    QString strResName = m_pWBuf->readStrN(nPos, nResNameLen);
+    const auto strResName = m_pWBuf->readStrN(nPos, nResNameLen);
 
     nPos += nResNameLen;
 
@@ -2319,10 +2311,9 @@ bool DecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nIndent
 
     QString strTmp;
     QString strBimName;
-    QString strByte;
 
     // Lookup 8BIM defined name
-    QString strBimDefName = "";
+    QString strBimDefName;
 
     bool bBimKnown = false;
 
@@ -2908,9 +2899,8 @@ void DecodePs::PhotoshopParseDescriptor(uint32_t &nPos, uint32_t nIndent) {
 //
 void DecodePs::PhotoshopParseList(uint32_t &nPos, uint32_t nIndent) {
     QString strVal;
-    QString strLine;
 
-    uint32_t nNumItems = m_pWBuf->getData4(nPos, PS_BSWAP);
+    const auto nNumItems = m_pWBuf->getData4(nPos, PS_BSWAP);
 
     PhotoshopParseReportFldNum(nIndent, "Num items in list", nNumItems, "");
 
@@ -2948,12 +2938,7 @@ void DecodePs::PhotoshopParseList(uint32_t &nPos, uint32_t nIndent) {
 // - nPos               = File position after reading the entry
 //
 void DecodePs::PhotoshopParseInteger(uint32_t &nPos, uint32_t nIndent) {
-    uint32_t nVal;
-
-    QString strVal;
-    QString strLine;
-
-    nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
+    const auto nVal = m_pWBuf->getData4(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Value", nVal, "");
 }
 
@@ -2965,12 +2950,7 @@ void DecodePs::PhotoshopParseInteger(uint32_t &nPos, uint32_t nIndent) {
 // - nPos               = File position after reading the entry
 //
 void DecodePs::PhotoshopParseBool(uint32_t &nPos, uint32_t nIndent) {
-    uint32_t nVal;
-
-    QString strVal;
-    QString strLine;
-
-    nVal = m_pWBuf->getData1(nPos, PS_BSWAP);
+    const auto nVal = m_pWBuf->getData1(nPos, PS_BSWAP);
     PhotoshopParseReportFldBool(nIndent, "Value", nVal);
 }
 
@@ -2983,7 +2963,6 @@ void DecodePs::PhotoshopParseBool(uint32_t &nPos, uint32_t nIndent) {
 //
 void DecodePs::PhotoshopParseEnum(uint32_t &nPos, uint32_t nIndent) {
     QString strVal;
-    QString strLine;
 
     strVal = PhotoshopParseGetLStrAsc(nPos);
     PhotoshopParseReportFldStr(nIndent, "Type", strVal);

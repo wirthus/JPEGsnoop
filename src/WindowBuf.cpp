@@ -156,10 +156,8 @@ bool WindowBuf::search(uint32_t startPosition, uint32_t searchValue, uint32_t se
             currentValue = (getByte(currentPos + 0) << 16) + (getByte(currentPos + 1) << 8) + getByte(currentPos + 2);
         } else if (searchLength == 2) {
             currentValue = (getByte(currentPos + 0) << 8) + getByte(currentPos + 1);
-        } else if (searchLength == 1) {
-            currentValue = getByte(currentPos + 0);
         } else {
-            return false;
+            currentValue = getByte(currentPos + 0);
         }
 
         if (currentValue == searchValue) {
@@ -877,7 +875,7 @@ QString WindowBuf::readUniStr2(uint32_t nPos, uint32_t nBufLen) {
 QString WindowBuf::readStrN(uint32_t nPosition, uint32_t nLen) {
     // Try to read a fixed-length string from file offset "nPosition"
     // up to a maximum of "nLen" bytes. Result is length "nLen"
-    QString strRd = "";
+    QString strRd;
 
     unsigned char cRd;
 
